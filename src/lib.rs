@@ -598,15 +598,15 @@ impl Voltage {
         };
 
         //根据角度计算当前扇区
-        let sector = libm::floorf(angle_el / PI_3) + 1.;
-        let T1 = libm::sinf(sector * PI_3 - angle_el);
+        let sector = libm::floorf(angle_el / PI_3) as i32 + 1;
+        let T1 = libm::sinf(sector as f32 * PI_3 - angle_el);
         println!("T1={T1}");
         let T1 = SQRT_3 * T1;
         println!("T1={T1}");
         //计算两个非零矢量作用时间
         let T1 = T1 * Uout; // SQRT_3 * libm::sinf(sector * PI_3 - angle_el) * Uout;
         println!("T1={T1}");
-        let T2 = SQRT_3 * libm::sinf(angle_el - (sector - 1.) * PI_3) * Uout;
+        let T2 = SQRT_3 * libm::sinf(angle_el - (sector - 1) as f32 * PI_3) * Uout;
         let T0 = 1. - T1 - T2; //零矢量作用时间
 
         //计算a b c相占空比时长
