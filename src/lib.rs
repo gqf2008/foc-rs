@@ -602,10 +602,10 @@ impl Voltage {
         let sector = libm::floorf(angle_el / PI_3) + 1.;
 
         //计算两个非零矢量作用时间
-        let T1 = SQRT_3 * libm::sinf((sector * PI_3 - angle_el).abs()) * Uout;
+        let T1 = SQRT_3 * libm::sinf(normalize_angle!(sector * PI_3 - angle_el)) * Uout; //SQRT_3 * libm::sinf((sector * PI_3 - angle_el).abs()) * Uout;
 
-        let T2 = SQRT_3 * libm::sinf((angle_el - (sector - 1.) * PI_3).abs()) * Uout;
-        // let T2 = SQRT_3 * libm::sinf(angle_el - (sector - 1.) * PI_3) * Uout;
+        let T2 = SQRT_3 * libm::sinf(normalize_angle!(angle_el - (sector - 1.) * PI_3)) * Uout; // SQRT_3 * libm::sinf((angle_el - (sector - 1.) * PI_3).abs()) * Uout;
+                                                                                                // let T2 = SQRT_3 * libm::sinf(angle_el - (sector - 1.) * PI_3) * Uout;
         let T0 = 1. - T1 - T2; //零矢量作用时间
 
         //计算a b c相占空比时长
