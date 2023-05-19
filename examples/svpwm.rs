@@ -8,10 +8,16 @@ fn main() {
     (0..=500).for_each(|i| {
         let angle_el = _3PI_2 + _2PI * i as f32 / 500.;
 
-        let out = Voltage::Dq(0., 6.).svpwm(angle_el, 12.);
+        let out = Voltage::Dq(0., 6.).svpwm_simplefoc(angle_el, 12.);
 
-        csv1.write_fmt(format_args!("{},{},{}\n", out.Ua(), out.Ub(), out.Uc()))
-            .ok();
+        csv1.write_fmt(format_args!(
+            "6.0,{},{},{},{}\n",
+            angle_el,
+            out.Ua(),
+            out.Ub(),
+            out.Uc()
+        ))
+        .ok();
     });
     std::fs::write("svpwm.csv", csv1).ok();
     // let mut csv2 = String::new();

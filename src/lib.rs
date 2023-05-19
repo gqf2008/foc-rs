@@ -1,7 +1,7 @@
 //!定义了FOC控制中控制模块、调制模块、反馈模块、传感器模块的抽象定义，
 //! 实现了park、clarke变换和正弦调制、空间矢量调制算法
 
-#![no_std]
+// #![no_std]
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
@@ -329,8 +329,8 @@ impl Current {
 
     pub fn park(self, θ: f32) -> Self {
         if let Self::αβ(α, β) = self {
-            let cos = libm::cosf(θ);
-            let sin = libm::sinf(θ);
+            let cos = θ.cos();
+            let sin = θ.sin();
             let d = α * cos + β * sin;
             let q = -α * sin + β * cos;
             return Self::Dq(d, q);
@@ -423,8 +423,8 @@ impl Voltage {
     //逆Park变换
     pub fn ipark(self, θ: f32) -> Self {
         if let Self::Dq(d, q) = self {
-            let cos = libm::cosf(θ);
-            let sin = libm::sinf(θ);
+            let cos = θ.cos();
+            let sin = θ.sin();
             let α = cos * d - sin * q;
             let β = sin * d + cos * q;
             return Self::αβ(α, β);
@@ -521,15 +521,15 @@ impl Voltage {
     pub fn svpwm(self, angle_el: f32, voltage_limit: f32) -> Voltage {
         let q = self.Uq();
         if let Voltage::αβ(α, β) = self.ipark(angle_el) {
-            let Uout = libm::sqrtf(α * α + β * β) / voltage_limit;
+            let Uout = (α * α + β * β).sqrt() / voltage_limit;
             let angle_el = if q.is_sign_positive() {
                 normalize_angle!(angle_el + PI_2) //加90度后是参考电压矢量的位置
             } else {
                 normalize_angle!(angle_el - PI_2)
             };
-            let sector = libm::floorf(angle_el / PI_3) + 1.; //根据角度计算当前扇区
-            let T1 = SQRT_3 * libm::sinf(sector * PI_3 - angle_el) * Uout; //计算两个非零矢量作用时间
-            let T2 = SQRT_3 * libm::sinf(angle_el - (sector - 1.0) * PI_3) * Uout;
+            let sector = (angle_el / PI_3).floor() + 1.; //根据角度计算当前扇区
+            let T1 = SQRT_3 * (sector * PI_3 - angle_el).sin() * Uout; //计算两个非零矢量作用时间
+            let T2 = SQRT_3 * (angle_el - (sector - 1.0) * PI_3).sin() * Uout;
             let T0 = 1. - T1 - T2; //零矢量作用时间
             let sector = sector as i8;
             //计算a b c相占空比时长
@@ -587,8 +587,8 @@ impl Voltage {
         let q = self.Uq();
         let d = self.Ud();
         let (Uout, angle_el) = if d > 0. {
-            let Uout = libm::sqrtf(d * d + q * q) / voltage_limit;
-            let angle_el = normalize_angle!(angle_el + libm::atan2f(q, d)); //libm::atan2f(q, d)
+            let Uout = (d * d + q * q).sqrt() / voltage_limit;
+            let angle_el = normalize_angle!(angle_el + q.atan2(d)); //libm::atan2f(q, d)
             (Uout, angle_el)
         } else {
             let Uout = q / voltage_limit;
@@ -597,11 +597,11 @@ impl Voltage {
         };
 
         //根据角度计算当前扇区
-        let sector = libm::floorf(angle_el / PI_3) as i32 + 1;
+        let sector = (angle_el / PI_3).floor() as i32 + 1;
 
         //计算两个非零矢量作用时间
-        let T1 = SQRT_3 * libm::sinf(sector as f32 * PI_3 - angle_el) * Uout;
-        let T2 = SQRT_3 * libm::sinf(angle_el - (sector - 1) as f32 * PI_3) * Uout;
+        let T1 = SQRT_3 * (sector as f32 * PI_3 - angle_el).sin() * Uout;
+        let T2 = SQRT_3 * (angle_el - (sector - 1) as f32 * PI_3).sin() * Uout;
         let T0 = 1. - T1 - T2; //零矢量作用时间
                                // println!("Uout={Uout},sector={sector},T1={T1},T2={T2},T0={T0}");
                                //计算a b c相占空比时长
