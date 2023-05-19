@@ -88,6 +88,14 @@ impl Target {
     }
 }
 
+//调制方式
+#[derive(Debug, Clone, Copy)]
+pub enum Modulation {
+    Spwm,
+    Svpwm,
+    SvpwmSimpleFOC,
+}
+
 pub trait Motor {
     type Regulator: Regulator;
     type Observer: Observer;
@@ -105,10 +113,21 @@ pub trait Motor {
 
     fn driver(&mut self) -> &mut Self::Driver;
 
+    fn modulation(&self) -> Modulation {
+        Modulation::Svpwm
+    }
+
     fn set_phase_voltage(&mut self, uq: f32, ud: f32, angle_el: f32) -> &mut Self {
+        let modulation = self.modulation();
         let driver = self.driver();
         let voltage_limit = driver.voltage_limit();
-        let uvw = Voltage::Dq(ud, uq).svpwm(angle_el, voltage_limit);
+        let uvw = match modulation {
+            Modulation::Spwm => Voltage::Dq(ud, uq).spwm(angle_el, voltage_limit),
+            Modulation::Svpwm => Voltage::Dq(ud, uq).svpwm(angle_el, voltage_limit),
+            Modulation::SvpwmSimpleFOC => {
+                Voltage::Dq(ud, uq).svpwm_simplefoc(angle_el, voltage_limit)
+            }
+        };
         driver.set_target(uvw);
         self
     }
