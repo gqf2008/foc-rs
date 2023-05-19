@@ -5,8 +5,8 @@ use foc_rs::*;
 fn main() {
     println!("================svpwm===============");
     let mut csv1 = String::new();
-    (0..=500).for_each(|i| {
-        let angle_el = _3PI_2 + _2PI * i as f32 / 500.;
+    (0..=100).for_each(|i| {
+        let angle_el = _3PI_2 + _2PI * i as f32 / 100.;
 
         let out = Voltage::Dq(0., 6.).svpwm_simplefoc(angle_el, 12.);
 

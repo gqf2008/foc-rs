@@ -33,15 +33,15 @@
 
 #define MIN_ANGLE_DETECT_MOVEMENT (_2PI / 101.0f)
 
-void svpwm(float Uq, float Ud, float angle_el, float voltage_limit);
-void spwm(float Uq, float Ud, float angle_el, float voltage_limit);
+struct Voltage svpwm(float Uq, float Ud, float angle_el, float voltage_limit);
+struct Voltage spwm(float Uq, float Ud, float angle_el, float voltage_limit);
 int main()
 {
   printf("=================SVPWM=================\n");
-  for (int i = 0; i <=500; i++)
+  for (int i = 0; i <= 500; i++)
   {
-     float angle = _3PI_2 + _2PI * i / 500.;
-     // printf("i=%d,angle=%f\n",i,angle);
+    float angle = _3PI_2 + _2PI * i / 500.;
+    // printf("i=%d,angle=%f\n",i,angle);
     svpwm(6.0f, 0.0f, angle, 12.0f);
   }
 
@@ -137,7 +137,14 @@ float _sqrtApprox(float number)
   return number * y;
 }
 
-void spwm(float Uq, float Ud, float angle_el, float voltage_limit)
+struct Voltage
+{
+  float U;
+  float V;
+  float W;
+};
+
+struct Voltage spwm(float Uq, float Ud, float angle_el, float voltage_limit)
 {
   float _ca, _sa;
   float Ualpha, Ubeta;
@@ -152,14 +159,15 @@ void spwm(float Uq, float Ud, float angle_el, float voltage_limit)
   // center = modulation_centered ? (driver->voltage_limit)/2 : Uq;
   center = voltage_limit / 2;
   // Clarke transform
-  float Ua = Ualpha + center;
-  float Ub = -0.5f * Ualpha + _SQRT3_2 * Ubeta + center;
-  float Uc = -0.5f * Ualpha - _SQRT3_2 * Ubeta + center;
+  struct Voltage uvw;
+  uvw.U = Ualpha + center;
+  uvw.V = -0.5f * Ualpha + _SQRT3_2 * Ubeta + center;
+  uvw.W = -0.5f * Ualpha - _SQRT3_2 * Ubeta + center;
 
-  printf("%f,%f,%f\n", Ua, Ub, Uc);
+  return uvw;
 }
 
-void svpwm(float Uq, float Ud, float angle_el, float voltage_limit)
+struct Voltage svpwm(float Uq, float Ud, float angle_el, float voltage_limit)
 {
   float center;
   int sector;
@@ -183,14 +191,14 @@ void svpwm(float Uq, float Ud, float angle_el, float voltage_limit)
   }
   // find the sector we are in currently
   sector = floor(angle_el / _PI_3) + 1;
-  
+
   // calculate the duty cycles
   float T1 = _SQRT3 * _sin(sector * _PI_3 - angle_el) * Uout;
   float T2 = _SQRT3 * _sin(angle_el - (sector - 1.0f) * _PI_3) * Uout;
   // two versions possible
   float T0 = 0;     // pulled to 0 - better for low power supply voltage
   T0 = 1 - T1 - T2; // modulation_centered around driver->voltage_limit/2
-// printf("Uout=%f,sector=%d,T1=%f,T2=%f,T0=%f\n",Uout,sector,T1,T2,T0);
+                    // printf("Uout=%f,sector=%d,T1=%f,T2=%f,T0=%f\n",Uout,sector,T1,T2,T0);
   // calculate the duty cycles(times)
   float Ta, Tb, Tc;
   switch (sector)
@@ -232,9 +240,10 @@ void svpwm(float Uq, float Ud, float angle_el, float voltage_limit)
     Tc = 0;
   }
 
+  struct Voltage uvw;
   // calculate the phase voltages and center
-  float Ua = Ta * voltage_limit;
-  float Ub = Tb * voltage_limit;
-  float Uc = Tc * voltage_limit;
-  printf("%f,%f,%f\n", Ua, Ub, Uc);
+  uvw.U = Ta * voltage_limit;
+  uvw.V = Tb * voltage_limit;
+  uvw.W = Tc * voltage_limit;
+  return uvw;
 }

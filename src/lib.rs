@@ -1,13 +1,14 @@
 //!定义了FOC控制中控制模块、调制模块、反馈模块、传感器模块的抽象定义，
 //! 实现了park、clarke变换和正弦调制、空间矢量调制算法
 
-#![no_std]
+// #![no_std]
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![feature(associated_type_defaults)]
 
 use core::panic;
+
 pub const PI_1_3: f32 = 1.0471975512;
 pub const PI: f32 = 3.14159265359;
 pub const PI_2: f32 = 1.57079632679;
@@ -329,8 +330,8 @@ impl Current {
 
     pub fn park(self, θ: f32) -> Self {
         if let Self::αβ(α, β) = self {
-            let cos = _cos(θ);
-            let sin = _sin(θ);
+            let cos = libm::cosf(θ);
+            let sin = libm::sinf(θ);
             let d = α * cos + β * sin;
             let q = -α * sin + β * cos;
             return Self::Dq(d, q);
@@ -423,8 +424,8 @@ impl Voltage {
     //逆Park变换
     pub fn ipark(self, θ: f32) -> Self {
         if let Self::Dq(d, q) = self {
-            let cos = _cos(θ);
-            let sin = _sin(θ);
+            let cos = libm::cosf(θ);
+            let sin = libm::sinf(θ);
             let α = cos * d - sin * q;
             let β = sin * d + cos * q;
             return Self::αβ(α, β);
@@ -528,8 +529,8 @@ impl Voltage {
                 normalize_angle!(angle_el - PI_2)
             };
             let sector = libm::floorf(angle_el / PI_3) + 1.; //根据角度计算当前扇区
-            let T1 = SQRT_3 * _sin(sector * PI_3 - angle_el) * Uout; //计算两个非零矢量作用时间
-            let T2 = SQRT_3 * _sin(angle_el - (sector - 1.0) * PI_3) * Uout;
+            let T1 = SQRT_3 * libm::sinf(sector * PI_3 - angle_el) * Uout; //计算两个非零矢量作用时间
+            let T2 = SQRT_3 * libm::sinf(angle_el - (sector - 1.0) * PI_3) * Uout;
             let T0 = 1. - T1 - T2; //零矢量作用时间
             let sector = sector as i8;
             //计算a b c相占空比时长
@@ -598,10 +599,14 @@ impl Voltage {
 
         //根据角度计算当前扇区
         let sector = libm::floorf(angle_el / PI_3) + 1.;
-
+        let T1 = libm::sinf(sector * PI_3 - angle_el);
+        println!("T1={T1}");
+        let T1 = SQRT_3 * T1;
+        println!("T1={T1}");
         //计算两个非零矢量作用时间
-        let T1 = SQRT_3 * _sin(sector * PI_3 - angle_el) * Uout;
-        let T2 = SQRT_3 * _sin(angle_el - (sector - 1.) * PI_3) * Uout;
+        let T1 = T1 * Uout; // SQRT_3 * libm::sinf(sector * PI_3 - angle_el) * Uout;
+        println!("T1={T1}");
+        let T2 = SQRT_3 * libm::sinf(angle_el - (sector - 1.) * PI_3) * Uout;
         let T0 = 1. - T1 - T2; //零矢量作用时间
 
         //计算a b c相占空比时长
@@ -650,7 +655,7 @@ impl Voltage {
         let ua = Ta * voltage_limit;
         let ub = Tb * voltage_limit;
         let uc = Tc * voltage_limit;
-        // println!("{angle_el},{Uout},{sector},{T0},{T1},{T2},{Ta},{Tb},{Tc},{ua},{ub},{uc}");
+        println!("{angle_el},{Uout},{sector},{T0},{T1},{T2},{Ta},{Tb},{Tc},{ua},{ub},{uc}");
         Voltage::Phase3(ua, ub, uc)
     }
 }
@@ -674,48 +679,4 @@ impl core::ops::Div<f32> for Voltage {
     fn div(self, rhs: f32) -> Self::Output {
         self.mul(rhs.recip())
     }
-}
-
-macro_rules! _round {
-    ($x:expr) => {{
-        if $x.is_sign_positive() {
-            ($x + 0.5) as i32
-        } else {
-            ($x - 0.5) as i32
-        }
-    }};
-}
-
-const sine_array: [i32; 200] = [
-    0, 79, 158, 237, 316, 395, 473, 552, 631, 710, 789, 867, 946, 1024, 1103, 1181, 1260, 1338,
-    1416, 1494, 1572, 1650, 1728, 1806, 1883, 1961, 2038, 2115, 2192, 2269, 2346, 2423, 2499, 2575,
-    2652, 2728, 2804, 2879, 2955, 3030, 3105, 3180, 3255, 3329, 3404, 3478, 3552, 3625, 3699, 3772,
-    3845, 3918, 3990, 4063, 4135, 4206, 4278, 4349, 4420, 4491, 4561, 4631, 4701, 4770, 4840, 4909,
-    4977, 5046, 5113, 5181, 5249, 5316, 5382, 5449, 5515, 5580, 5646, 5711, 5775, 5839, 5903, 5967,
-    6030, 6093, 6155, 6217, 6279, 6340, 6401, 6461, 6521, 6581, 6640, 6699, 6758, 6815, 6873, 6930,
-    6987, 7043, 7099, 7154, 7209, 7264, 7318, 7371, 7424, 7477, 7529, 7581, 7632, 7683, 7733, 7783,
-    7832, 7881, 7930, 7977, 8025, 8072, 8118, 8164, 8209, 8254, 8298, 8342, 8385, 8428, 8470, 8512,
-    8553, 8594, 8634, 8673, 8712, 8751, 8789, 8826, 8863, 8899, 8935, 8970, 9005, 9039, 9072, 9105,
-    9138, 9169, 9201, 9231, 9261, 9291, 9320, 9348, 9376, 9403, 9429, 9455, 9481, 9506, 9530, 9554,
-    9577, 9599, 9621, 9642, 9663, 9683, 9702, 9721, 9739, 9757, 9774, 9790, 9806, 9821, 9836, 9850,
-    9863, 9876, 9888, 9899, 9910, 9920, 9930, 9939, 9947, 9955, 9962, 9969, 9975, 9980, 9985, 9989,
-    9992, 9995, 9997, 9999, 10000, 10000,
-];
-
-fn _sin(a: f32) -> f32 {
-    if a < PI_2 {
-        0.0001 * sine_array[libm::roundf(126.6873 * a) as usize] as f32 // int array optimized
-    } else if a < PI {
-        0.0001 * sine_array[(398 - libm::roundf(126.6873 * a) as i32) as usize] as f32
-    } else if a < _3PI_2 {
-        -0.0001 * sine_array[(libm::roundf(126.6873 * a) as i32 - 398) as usize] as f32
-    } else {
-        -0.0001 * sine_array[(796 - libm::roundf(126.6873 * a) as i32) as usize] as f32
-    }
-}
-
-fn _cos(a: f32) -> f32 {
-    let a_sin = a + PI_2;
-    let a_sin = if a_sin > _2PI { a_sin - _2PI } else { a_sin };
-    _sin(a_sin)
 }
