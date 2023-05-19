@@ -599,6 +599,8 @@ impl Voltage {
 
         //根据角度计算当前扇区
         let sector = libm::floorf(angle_el / PI_3) as i32 + 1;
+        let T1 = sector as f32 * PI_3 - angle_el;
+        println!("T1={T1}, sector={sector},PI_3={PI_3},angle_el={angle_el}");
         let T1 = libm::sinf(sector as f32 * PI_3 - angle_el);
         println!("T1={T1}");
         let T1 = SQRT_3 * T1;
