@@ -650,7 +650,7 @@ impl Voltage {
         let ua = Ta * voltage_limit;
         let ub = Tb * voltage_limit;
         let uc = Tc * voltage_limit;
-        println!("{angle_el},{Uout},{sector},{T0},{T1},{T2},{Ta},{Tb},{Tc},{ua},{ub},{uc}");
+        // println!("{angle_el},{Uout},{sector},{T0},{T1},{T2},{Ta},{Tb},{Tc},{ua},{ub},{uc}");
         Voltage::Phase3(ua, ub, uc)
     }
 }
