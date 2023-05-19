@@ -51,10 +51,12 @@ macro_rules! electrical_angle {
 macro_rules! normalize_angle {
     ($angle:expr) => {{
         let a = libm::fmodf($angle, _2PI); //取余运算可以用于归一化，列出特殊值例子算便知
-        if a.is_sign_positive() || a.is_nan() {
+        if a.is_sign_positive() {
             a
-        } else {
+        } else if a.is_sign_negative() {
             a + _2PI
+        } else {
+            _2PI
         }
     }};
 }
@@ -598,12 +600,17 @@ impl Voltage {
         };
 
         //根据角度计算当前扇区
-        let sector = libm::floorf(angle_el / PI_3) as u32 + 1;
-        let T1 = sector as f32 * PI_3;
+        let sector = libm::floorf(angle_el / PI_3) + 1.;
+        let T1 = if angle_el.is_normal() {
+            sector * PI_3 - angle_el
+        } else {
+            sector * PI_3
+        };
 
         println!(
-            "T1={T1}, sector={sector},PI_3={PI_3},angle_el={angle_el},{}/{}",
+            "T1={T1}, sector={sector},PI_3={PI_3},angle_el={angle_el},{}/{}/{}",
             angle_el.is_normal(),
+            angle_el.is_subnormal(),
             angle_el.is_nan()
         );
         let T1 = libm::sinf(T1);
@@ -613,7 +620,12 @@ impl Voltage {
         //计算两个非零矢量作用时间
         let T1 = T1 * Uout; // SQRT_3 * libm::sinf(sector * PI_3 - angle_el) * Uout;
         println!("T1={T1}");
-        let T2 = SQRT_3 * libm::sinf(angle_el - (sector - 1) as f32 * PI_3) * Uout;
+        let T2 = if angle_el.is_normal() {
+            SQRT_3 * libm::sinf(angle_el - (sector - 1.) * PI_3) * Uout
+        } else {
+            SQRT_3 * libm::sinf(-(sector - 1.) * PI_3) * Uout
+        };
+        // let T2 = SQRT_3 * libm::sinf(angle_el - (sector - 1.) * PI_3) * Uout;
         let T0 = 1. - T1 - T2; //零矢量作用时间
 
         //计算a b c相占空比时长
