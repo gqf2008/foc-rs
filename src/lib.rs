@@ -598,33 +598,13 @@ impl Voltage {
             let angle_el = normalize_angle!(angle_el + PI_2);
             (Uout, angle_el)
         };
-
         //根据角度计算当前扇区
         let sector = libm::floorf(angle_el / PI_3) + 1.;
-        let T1 = if angle_el.is_normal() {
-            sector * PI_3 - angle_el
-        } else {
-            sector * PI_3
-        };
 
-        println!(
-            "T1={T1}, sector={sector},PI_3={PI_3},angle_el={angle_el},{}/{}/{}",
-            angle_el.is_normal(),
-            angle_el.is_subnormal(),
-            angle_el.is_nan()
-        );
-        let T1 = libm::sinf(T1);
-        println!("T1={T1}");
-        let T1 = SQRT_3 * T1;
-        println!("T1={T1}");
         //计算两个非零矢量作用时间
-        let T1 = T1 * Uout; // SQRT_3 * libm::sinf(sector * PI_3 - angle_el) * Uout;
-        println!("T1={T1}");
-        let T2 = if angle_el.is_normal() {
-            SQRT_3 * libm::sinf(angle_el - (sector - 1.) * PI_3) * Uout
-        } else {
-            SQRT_3 * libm::sinf(-(sector - 1.) * PI_3) * Uout
-        };
+        let T1 = SQRT_3 * libm::sinf((sector * PI_3 - angle_el).abs()) * Uout;
+
+        let T2 = SQRT_3 * libm::sinf((angle_el - (sector - 1.) * PI_3).abs()) * Uout;
         // let T2 = SQRT_3 * libm::sinf(angle_el - (sector - 1.) * PI_3) * Uout;
         let T0 = 1. - T1 - T2; //零矢量作用时间
 
@@ -674,7 +654,7 @@ impl Voltage {
         let ua = Ta * voltage_limit;
         let ub = Tb * voltage_limit;
         let uc = Tc * voltage_limit;
-        println!("{angle_el},{Uout},{sector},{T0},{T1},{T2},{Ta},{Tb},{Tc},{ua},{ub},{uc}");
+        // println!("{angle_el},{Uout},{sector},{T0},{T1},{T2},{Ta},{Tb},{Tc},{ua},{ub},{uc}");
         Voltage::Phase3(ua, ub, uc)
     }
 }
