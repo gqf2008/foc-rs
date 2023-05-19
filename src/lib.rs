@@ -96,6 +96,18 @@ pub enum Modulation {
     SvpwmSimpleFOC,
 }
 
+//电机状态
+#[derive(Debug, Clone, Copy)]
+pub enum State {
+    Uncalibrated,
+    Calibrating,
+    Enabled,
+    Disabled,
+    Ready,
+    Moving,
+    Error(i32),
+}
+
 pub trait Motor {
     type Regulator: Regulator;
     type Observer: Observer;
@@ -116,6 +128,8 @@ pub trait Motor {
     fn modulation(&self) -> Modulation {
         Modulation::Svpwm
     }
+
+    fn state(&self) -> State;
 
     fn set_phase_voltage(&mut self, uq: f32, ud: f32, angle_el: f32) -> &mut Self {
         let modulation = self.modulation();
