@@ -597,14 +597,15 @@ impl Voltage {
         };
 
         //根据角度计算当前扇区
-        let sector = (angle_el / PI_3).floor() as i32 + 1;
+        let sector = (angle_el / PI_3).floor() + 1.;
 
         //计算两个非零矢量作用时间
-        let T1 = SQRT_3 * (sector as f32 * PI_3 - angle_el).sin() * Uout;
-        let T2 = SQRT_3 * (angle_el - (sector - 1) as f32 * PI_3).sin() * Uout;
+        let T1 = SQRT_3 * (sector * PI_3 - angle_el).sin() * Uout;
+        let T2 = SQRT_3 * (angle_el - (sector - 1.) * PI_3).sin() * Uout;
         let T0 = 1. - T1 - T2; //零矢量作用时间
-                               // println!("Uout={Uout},sector={sector},T1={T1},T2={T2},T0={T0}");
-                               //计算a b c相占空比时长
+
+        //计算a b c相占空比时长
+        let sector = sector as i32;
         let (Ta, Tb, Tc) = match sector {
             1 => {
                 let Ta = T1 + T2 + T0 / 2.;
