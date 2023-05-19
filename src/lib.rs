@@ -99,8 +99,8 @@ pub enum Modulation {
 //电机状态
 #[derive(Debug, Clone, Copy)]
 pub enum State {
-    Calibrating, //正在校准
     Disabled,    //禁用
+    Calibrating, //正在校准
     Ready,       //就绪
     Moving,      //运动
     Error(i32),  //错误
