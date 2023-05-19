@@ -704,13 +704,13 @@ const sine_array: [i32; 200] = [
 
 fn _sin(a: f32) -> f32 {
     if a < PI_2 {
-        0.0001 * sine_array[_round!(126.6873 * a) as usize] as f32 // int array optimized
+        0.0001 * sine_array[libm::roundf(126.6873 * a) as usize] as f32 // int array optimized
     } else if a < PI {
-        0.0001 * sine_array[(398 - _round!(126.6873 * a)) as usize] as f32
+        0.0001 * sine_array[(398 - libm::roundf(126.6873 * a) as i32) as usize] as f32
     } else if a < _3PI_2 {
-        -0.0001 * sine_array[(_round!(126.6873 * a) - 398) as usize] as f32
+        -0.0001 * sine_array[(libm::roundf(126.6873 * a) as i32 - 398) as usize] as f32
     } else {
-        -0.0001 * sine_array[(796 - _round!(126.6873 * a)) as usize] as f32
+        -0.0001 * sine_array[(796 - libm::roundf(126.6873 * a) as i32) as usize] as f32
     }
 }
 
