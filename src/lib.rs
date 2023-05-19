@@ -101,7 +101,6 @@ pub enum Modulation {
 pub enum State {
     Uncalibrated,
     Calibrating,
-    Enabled,
     Disabled,
     Ready,
     Moving,
