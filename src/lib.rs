@@ -39,7 +39,7 @@ macro_rules! constrain {
 #[macro_export]
 macro_rules! electrical_angle {
     ($shaft_angle:expr,$pole_pairs:expr) => {{
-        $shaft_angle * $pole_pairs
+        $shaft_angle * $pole_pairs as f32
     }};
     ($shaft_angle:expr,$pole_pairs:expr,$zero_electric_angle:expr) => {{
         (($shaft_angle * $pole_pairs as f32) as f64 - $zero_electric_angle as f64) as f32
