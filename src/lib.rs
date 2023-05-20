@@ -531,15 +531,10 @@ impl Voltage {
                 normalize_angle!(angle_el - PI_2)
             };
             let sector = libm::floorf(angle_el / PI_3) + 1.; //根据角度计算当前扇区
-            let a = (sector * PI_3 * 100000000.) as i64 - (angle_el * 100000000.) as i64;
-            //计算两个非零矢量作用时间
-            let T1 = SQRT_3 * libm::sinf(a as u32 as f32 / 100000000.) * Uout;
-            let a = (angle_el * 100000000.) as i64
-                - (angle_el * 100000000.) as i64
-                - ((sector - 1.) * PI_3 * 100000000.) as i64;
-            let T2 = SQRT_3 * libm::sinf(a as u32 as f32 / 100000000.) * Uout;
+            let T1 = SQRT_3 * libm::sinf(sector * PI_3 - angle_el) * Uout; //计算两个非零矢量作用时间
+            let T2 = SQRT_3 * libm::sinf(angle_el - (sector - 1.0) * PI_3) * Uout;
             let T0 = 1. - T1 - T2; //零矢量作用时间
-            let sector = sector as i8;
+            let sector = sector as i32;
             //计算a b c相占空比时长
             let (Ta, Tb, Tc) = match sector {
                 1 => {
@@ -605,13 +600,9 @@ impl Voltage {
         };
         //根据角度计算当前扇区
         let sector = libm::floorf(angle_el / PI_3) + 1.;
-        let a = (sector * PI_3 * 100000000.) as i64 - (angle_el * 100000000.) as i64;
         //计算两个非零矢量作用时间
-        let T1 = SQRT_3 * libm::sinf(a as u32 as f32 / 100000000.) * Uout;
-        let a = (angle_el * 100000000.) as i64
-            - (angle_el * 100000000.) as i64
-            - ((sector - 1.) * PI_3 * 100000000.) as i64;
-        let T2 = SQRT_3 * libm::sinf(a as u32 as f32 / 100000000.) * Uout;
+        let T1 = SQRT_3 * libm::sinf(sector * PI_3 - angle_el) * Uout;
+        let T2 = SQRT_3 * libm::sinf(angle_el - (sector - 1.) * PI_3) * Uout;
         let T0 = 1. - T1 - T2; //零矢量作用时间
 
         //计算a b c相占空比时长
