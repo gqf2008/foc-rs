@@ -53,10 +53,8 @@ macro_rules! normalize_angle {
         let a = libm::fmodf($angle, _2PI); //取余运算可以用于归一化，列出特殊值例子算便知
         if a.is_sign_positive() {
             a
-        } else if a.is_sign_negative() {
+        } else  {
             a + _2PI
-        } else {
-            _2PI
         }
     }};
 }
