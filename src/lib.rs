@@ -528,9 +528,12 @@ impl Voltage {
             } else {
                 normalize_angle!(angle_el - PI_2)
             };
-            let sector = libm::floorf(angle_el / PI_3) + 1.; //根据角度计算当前扇区
+            //根据角度计算当前扇区
+            let sector = libm::floorf(angle_el / PI_3) + 1.;
+            // BUG 单精度计算在esp32平台会出现意外结果
             let a = sector as f64 * PI_3 as f64 - angle_el as f64;
-            let T1 = SQRT_3 * libm::sinf(a as f32) * Uout; //计算两个非零矢量作用时间
+            let T1 = SQRT_3 * libm::sinf(a as f32) * Uout;
+            // BUG 单精度计算在esp32平台会出现意外结果
             let a = angle_el as f64 - (sector as f64 - 1.) * PI_3 as f64;
             let T2 = SQRT_3 * libm::sinf(a as f32) * Uout;
             let T0 = 1. - T1 - T2; //零矢量作用时间
@@ -601,6 +604,7 @@ impl Voltage {
         //根据角度计算当前扇区
         let sector = libm::floorf(angle_el / PI_3) + 1.;
         //计算两个非零矢量作用时间
+        // BUG 单精度计算在esp32平台会出现意外结果，所以改用双精度计算
         let a = sector as f64 * PI_3 as f64 - angle_el as f64;
         let T1 = SQRT_3 * libm::sinf(a as f32) * Uout;
         let a = angle_el as f64 - (sector as f64 - 1.) * PI_3 as f64;
