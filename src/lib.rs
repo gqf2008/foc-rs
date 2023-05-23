@@ -149,23 +149,21 @@ pub trait Motor {
 //观测器
 pub trait Observer {
     type Output;
-    //更新观测器
-    fn update(&mut self) -> &mut Self;
     //转子轴速度（弧度/秒）
     fn velocity(&mut self) -> Self::Output;
-    //转子机械角度
+    //转子机械角度（弧度）
     fn angle(&mut self) -> Self::Output;
-    //转子位置
+    //转子位置(0-2PI)
     fn position(&mut self) -> Self::Output;
+    //转子机械角度和速度
+    fn angle_velocity(&mut self) -> (Self::Output, Self::Output);
 }
 
 pub struct NoneObserver;
 
 impl Observer for NoneObserver {
     type Output = f32;
-    fn update(&mut self) -> &mut Self {
-        self
-    }
+
     fn angle(&mut self) -> Self::Output {
         0.
     }
@@ -175,6 +173,9 @@ impl Observer for NoneObserver {
 
     fn position(&mut self) -> Self::Output {
         0.
+    }
+    fn angle_velocity(&mut self) -> (Self::Output, Self::Output) {
+        (0., 0.)
     }
 }
 
