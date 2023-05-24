@@ -83,7 +83,7 @@ macro_rules! normalize_angle {
 //电机驱动
 pub trait Driver {
     fn set_target(&mut self, target: Voltage);
-    fn voltage_limit(&self) -> f32;
+    fn max_voltage(&self) -> f32;
     fn voltage_power_supply(&self) -> f32;
 }
 
@@ -154,7 +154,7 @@ pub trait Motor {
     fn set_phase_voltage(&mut self, uq: f32, ud: f32, angle_el: f32) -> &mut Self {
         let modulation = self.modulation();
         let driver = self.driver();
-        let voltage_limit = driver.voltage_limit();
+        let voltage_limit = driver.max_voltage();
         let uvw = match modulation {
             Modulation::Spwm => Voltage::Dq(ud, uq).spwm(angle_el, voltage_limit),
             Modulation::Svpwm => Voltage::Dq(ud, uq).svpwm(angle_el, voltage_limit),
