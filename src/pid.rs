@@ -142,6 +142,12 @@ impl Pid {
 }
 
 impl Pid {
+    pub fn set_kpid(&mut self, kp: f32, ki: f32, kd: f32) -> &mut Self {
+        self.kp = kp;
+        self.ki = ki;
+        self.kd = kd;
+        self
+    }
     pub fn set_kpi(&mut self, kp: f32, ki: f32) -> &mut Self {
         self.kp = kp;
         self.ki = ki;
