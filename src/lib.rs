@@ -44,16 +44,6 @@ pub const DEF_P_ANGLE_P: f32 = 20.0;
 pub const DEF_VEL_LIM: f32 = 20.0;
 
 #[macro_export]
-macro_rules! addf32 {
-    ($x:expr,$y:expr) => {{
-        ($x as f64 + $y as f64) as f32
-    }};
-    ($x:expr,$y:expr,$z:expr) => {{
-        ($x as f64 + $y as f64 + $z as f64) as f32
-    }};
-}
-
-#[macro_export]
 macro_rules! constrain {
     ($a:expr,$min:expr,$max:expr) => {{
         if $a < $min {
@@ -85,7 +75,7 @@ macro_rules! normalize_angle {
         if a.is_sign_positive() {
             a
         } else  {
-            addf32!(a , _2PI)
+            a + _2PI
         }
     }};
 }
@@ -354,7 +344,7 @@ impl Current {
     pub fn clarke(self) -> Self {
         if let Self::Phase(ia, ib, _ic) = self {
             let α = ia;
-            let β = addf32!(ia, 2.0 * ib) * _1_SQRT_3;
+            let β = (ia + 2.0 * ib) * _1_SQRT_3;
             return Self::αβ(α, β);
         }
         panic!()
@@ -364,8 +354,8 @@ impl Current {
         if let Self::αβ(α, β) = self {
             let cos = libm::cosf(θ);
             let sin = libm::sinf(θ);
-            let d = addf32!(α * cos, β * sin);
-            let q = addf32!(-α * sin, β * cos);
+            let d = α * cos + β * sin;
+            let q = -α * sin + β * cos;
             return Self::Dq(d, q);
         }
         panic!()
@@ -458,8 +448,8 @@ impl Voltage {
         if let Self::Dq(d, q) = self {
             let cos = libm::cosf(θ);
             let sin = libm::sinf(θ);
-            let α = addf32!(cos * d, -sin * q);
-            let β = addf32!(sin * d, cos * q);
+            let α = cos * d - sin * q;
+            let β = sin * d + cos * q;
             return Self::αβ(α, β);
         }
         panic!()
@@ -468,8 +458,8 @@ impl Voltage {
     pub fn iclarke(self) -> Self {
         if let Self::αβ(α, β) = self {
             let a = α;
-            let b = addf32!(-α * 0.5, SQRT_3_2 * β);
-            let c = addf32!(-α * 0.5, -SQRT_3_2 * β);
+            let b = -α * 0.5 + SQRT_3_2 * β;
+            let c = -α * 0.5 - SQRT_3_2 * β;
             return Self::Phase3(a, b, c);
         }
         panic!()
@@ -554,58 +544,58 @@ impl Voltage {
     pub fn svpwm(self, angle_el: f32, voltage_limit: f32) -> Voltage {
         let q = self.Uq();
         if let Voltage::αβ(α, β) = self.ipark(angle_el) {
-            let Uout = libm::sqrtf(addf32!(α * α, β * β)) / voltage_limit;
+            let Uout = libm::sqrtf(α * α + β * β) / voltage_limit;
             let angle_el = if q.is_sign_positive() {
-                normalize_angle!(addf32!(angle_el, PI_2)) //加90度后是参考电压矢量的位置
+                normalize_angle!(angle_el + PI_2) //加90度后是参考电压矢量的位置
             } else {
-                normalize_angle!(addf32!(angle_el, -PI_2))
+                normalize_angle!(angle_el - PI_2)
             };
             //根据角度计算当前扇区
             let sector = libm::floorf(angle_el / PI_3) + 1.;
             // BUG 单精度计算在esp32平台会出现意外结果
-            let a = addf32!(sector * PI_3, -angle_el);
-            let T1 = SQRT_3 * libm::sinf(a) * Uout;
+            let a = sector as f64 * PI_3 as f64 - angle_el as f64;
+            let T1 = SQRT_3 * libm::sinf(a as f32) * Uout;
             // BUG 单精度计算在esp32平台会出现意外结果
-            let a = addf32!(angle_el, -addf32!(sector, -1.) * PI_3);
-            let T2 = SQRT_3 * libm::sinf(a) * Uout;
-            let T0 = addf32!(1., -T1, -T2); //零矢量作用时间
+            let a = angle_el as f64 - (sector as f64 - 1.) * PI_3 as f64;
+            let T2 = SQRT_3 * libm::sinf(a as f32) * Uout;
+            let T0 = 1. - T1 - T2; //零矢量作用时间
             let sector = sector as i32;
             //计算a b c相占空比时长
             let (Ta, Tb, Tc) = match sector {
                 1 => {
-                    let Ta = addf32!(T1, T2, T0 / 2.);
-                    let Tb = addf32!(T2, T0 / 2.);
+                    let Ta = T1 + T2 + T0 / 2.;
+                    let Tb = T2 + T0 / 2.;
                     let Tc = T0 / 2.;
                     (Ta, Tb, Tc)
                 }
                 2 => {
-                    let Ta = addf32!(T1, T0 / 2.);
-                    let Tb = addf32!(T1, T2, T0 / 2.);
+                    let Ta = T1 + T0 / 2.;
+                    let Tb = T1 + T2 + T0 / 2.;
                     let Tc = T0 / 2.;
                     (Ta, Tb, Tc)
                 }
                 3 => {
                     let Ta = T0 / 2.;
-                    let Tb = addf32!(T1, T2, T0 / 2.);
-                    let Tc = addf32!(T2, T0 / 2.);
+                    let Tb = T1 + T2 + T0 / 2.;
+                    let Tc = T2 + T0 / 2.;
                     (Ta, Tb, Tc)
                 }
                 4 => {
                     let Ta = T0 / 2.;
-                    let Tb = addf32!(T1, T0 / 2.);
-                    let Tc = addf32!(T1, T2, T0 / 2.);
+                    let Tb = T1 + T0 / 2.;
+                    let Tc = T1 + T2 + T0 / 2.;
                     (Ta, Tb, Tc)
                 }
                 5 => {
-                    let Ta = addf32!(T2, T0 / 2.);
+                    let Ta = T2 + T0 / 2.;
                     let Tb = T0 / 2.;
-                    let Tc = addf32!(T1, T2, T0 / 2.);
+                    let Tc = T1 + T2 + T0 / 2.;
                     (Ta, Tb, Tc)
                 }
                 6 => {
-                    let Ta = addf32!(T1, T2, T0 / 2.);
+                    let Ta = T1 + T2 + T0 / 2.;
                     let Tb = T0 / 2.;
-                    let Tc = addf32!(T1, T0 / 2.);
+                    let Tc = T1 + T0 / 2.;
                     (Ta, Tb, Tc)
                 }
                 _ => (0., 0., 0.),
@@ -625,61 +615,61 @@ impl Voltage {
         let q = self.Uq();
         let d = self.Ud();
         let (Uout, angle_el) = if d > 0. {
-            let Uout = libm::sqrtf(addf32!(d * d, q * q)) / voltage_limit;
-            let angle_el = normalize_angle!(addf32!(angle_el, libm::atan2f(q, d))); //libm::atan2f(q, d)
+            let Uout = libm::sqrtf(d * d + q * q) / voltage_limit;
+            let angle_el = normalize_angle!(angle_el + libm::atan2f(q, d)); //libm::atan2f(q, d)
             (Uout, angle_el)
         } else {
             let Uout = q / voltage_limit;
-            let angle_el = normalize_angle!(addf32!(angle_el, PI_2));
+            let angle_el = normalize_angle!(angle_el + PI_2);
             (Uout, angle_el)
         };
         //根据角度计算当前扇区
-        let sector = addf32!(libm::floorf(angle_el / PI_3), 1.);
+        let sector = libm::floorf(angle_el / PI_3) + 1.;
         //计算两个非零矢量作用时间
         // BUG 单精度计算在esp32平台会出现意外结果，所以改用双精度计算
-        let a = addf32!(sector * PI_3, -angle_el);
+        let a = sector as f64 * PI_3 as f64 - angle_el as f64;
         let T1 = SQRT_3 * libm::sinf(a as f32) * Uout;
-        let a = addf32!(angle_el, -addf32!(sector, -1.) * PI_3);
+        let a = angle_el as f64 - (sector as f64 - 1.) * PI_3 as f64;
         let T2 = SQRT_3 * libm::sinf(a as f32) * Uout;
-        let T0 = addf32!(1., -T1, -T2); //零矢量作用时间
+        let T0 = 1. - T1 - T2; //零矢量作用时间
 
         //计算a b c相占空比时长
         let sector = sector as i32;
         let (Ta, Tb, Tc) = match sector {
             1 => {
-                let Ta = addf32!(T1, T2, T0 / 2.);
-                let Tb = addf32!(T2, T0 / 2.);
+                let Ta = T1 + T2 + T0 / 2.;
+                let Tb = T2 + T0 / 2.;
                 let Tc = T0 / 2.;
                 (Ta, Tb, Tc)
             }
             2 => {
-                let Ta = addf32!(T1, T0 / 2.);
-                let Tb = addf32!(T1, T2, T0 / 2.);
+                let Ta = T1 + T0 / 2.;
+                let Tb = T1 + T2 + T0 / 2.;
                 let Tc = T0 / 2.;
                 (Ta, Tb, Tc)
             }
             3 => {
                 let Ta = T0 / 2.;
-                let Tb = addf32!(T1, T2, T0 / 2.);
-                let Tc = addf32!(T2, T0 / 2.);
+                let Tb = T1 + T2 + T0 / 2.;
+                let Tc = T2 + T0 / 2.;
                 (Ta, Tb, Tc)
             }
             4 => {
                 let Ta = T0 / 2.;
-                let Tb = addf32!(T1, T0 / 2.);
-                let Tc = addf32!(T1, T2, T0 / 2.);
+                let Tb = T1 + T0 / 2.;
+                let Tc = T1 + T2 + T0 / 2.;
                 (Ta, Tb, Tc)
             }
             5 => {
-                let Ta = addf32!(T2, T0 / 2.);
+                let Ta = T2 + T0 / 2.;
                 let Tb = T0 / 2.;
-                let Tc = addf32!(T1, T2, T0 / 2.);
+                let Tc = T1 + T2 + T0 / 2.;
                 (Ta, Tb, Tc)
             }
             6 => {
-                let Ta = addf32!(T1, T2, T0 / 2.);
+                let Ta = T1 + T2 + T0 / 2.;
                 let Tb = T0 / 2.;
-                let Tc = addf32!(T1, T0 / 2.);
+                let Tc = T1 + T0 / 2.;
                 (Ta, Tb, Tc)
             }
             _ => (0., 0., 0.),

@@ -1,17 +1,17 @@
 //!低通滤波器
 //!参考：https://github.com/simplefoc/Arduino-FOC/blob/master/src/common/lowpass_filter.cpp
-use crate::addf32;
+
 #[derive(Debug)]
 pub struct LowPassFilter {
-    tf: f32, //时间常量
+    tf: f64, //时间常量
     timestamp_prev: i64,
-    y_prev: f32,
+    y_prev: f64,
 }
 
 impl LowPassFilter {
     pub fn new(tf: f32) -> Self {
         Self {
-            tf,
+            tf: tf as f64,
             timestamp_prev: 0,
             y_prev: 0.,
         }
@@ -20,12 +20,12 @@ impl LowPassFilter {
 
 impl LowPassFilter {
     pub fn do_filter(&mut self, x: f32, timestamp_us: i64) -> f32 {
-        let mut dt = (timestamp_us - self.timestamp_prev) as f32 * 1e-6;
+        let mut dt = (timestamp_us - self.timestamp_prev) as f64 * 1e-6;
         self.timestamp_prev = timestamp_us;
         if dt.is_sign_negative() {
-            dt = 1e-3;
+            dt = 1e-3f64;
         } else if dt > 0.3 {
-            self.y_prev = x;
+            self.y_prev = x as f64;
             return x;
         }
         // 一阶低通滤波的算法公式为：
@@ -34,7 +34,7 @@ impl LowPassFilter {
         //计算滤波系数
         let alpha = self.tf / (self.tf + dt);
         // let y = alpha * x + (1.0 - alpha) * self.y_prev;
-        let y = addf32!(alpha * self.y_prev, addf32!(1.0, -alpha) * x);
+        let y = alpha * self.y_prev + (1.0 - alpha) * x as f64;
         self.y_prev = y;
         y as f32
     }
