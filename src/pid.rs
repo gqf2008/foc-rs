@@ -6,10 +6,10 @@ use crate::{constrain, Regulator};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Limit {
-    pub lp: f32,
-    pub li: f32,
-    pub ld: f32,
-    pub lo: f32,
+    lp: f32,
+    li: f32,
+    ld: f32,
+    lo: f32,
 }
 
 impl Default for Limit {
@@ -127,6 +127,11 @@ impl Pid {
     }
     pub fn limit_d(mut self, ld: f32) -> Self {
         self.limits.ld = ld;
+        self
+    }
+
+    pub fn limit_out(mut self, lo: f32) -> Self {
+        self.limits.lo = lo;
         self
     }
 
