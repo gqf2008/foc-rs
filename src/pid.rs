@@ -5,21 +5,6 @@
 use crate::{constrain, Regulator};
 
 #[derive(Clone, Copy, Debug)]
-pub struct K {
-    pub kp: f32,
-    pub ki: f32,
-    pub kd: f32,
-}
-impl Default for K {
-    fn default() -> Self {
-        Self {
-            kp: 1.0,
-            ki: 1.0,
-            kd: 1.0,
-        }
-    }
-}
-#[derive(Clone, Copy, Debug)]
 pub struct Limit {
     pub lp: f32,
     pub li: f32,
@@ -110,7 +95,9 @@ impl core::ops::Mul<f32> for Output {
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Pid {
-    k: K,
+    kp: f32,
+    ki: f32,
+    kd: f32,
     limits: Limit,
     target: f32,
     integral: f32,
@@ -122,38 +109,45 @@ pub struct Pid {
 
 impl Pid {
     /// `integral_limit`: The maximum magnitude of the integral (anti-windup)
-    pub fn new(k: K) -> Self {
+    pub fn new(kp: f32, ki: f32, kd: f32) -> Self {
         Pid {
-            k,
+            kp,
+            ki,
+            kd,
             ..Default::default()
         }
     }
-
-    pub fn with_limits(mut self, limits: Limit) -> Self {
-        self.limits = limits;
+    pub fn limit_p(mut self, lp: f32) -> Self {
+        self.limits.lp = lp;
         self
     }
-    pub fn with_ramp(mut self, ramp: f32) -> Self {
-        self.output.ramp = ramp;
+    pub fn limit_i(mut self, li: f32) -> Self {
+        self.limits.li = li;
         self
     }
-    pub fn with_limits_ramp(mut self, limits: Limit, ramp: f32) -> Self {
-        self.limits = limits;
-        self.output.ramp = ramp;
+    pub fn limit_d(mut self, ld: f32) -> Self {
+        self.limits.ld = ld;
         self
     }
 
+    pub fn ramp(mut self, ramp: f32) -> Self {
+        self.output.ramp = ramp;
+        self
+    }
+}
+
+impl Pid {
     pub fn set_kp(&mut self, kp: f32) -> &mut Self {
-        self.k.kp = kp;
+        self.kp = kp;
         self
     }
     pub fn set_ki(&mut self, ki: f32) -> &mut Self {
-        self.k.ki = ki;
+        self.ki = ki;
         self
     }
 
     pub fn set_kd(&mut self, kd: f32) -> &mut Self {
-        self.k.kd = kd;
+        self.kd = kd;
         self
     }
 }
@@ -171,21 +165,20 @@ impl Regulator for Pid {
         self.timestamp_prev = timestamp_now_us;
         let dt = if dt <= 0. || dt > 0.5 { 0.001 } else { dt };
 
-        let K { kp, ki, kd } = self.k;
         let Limit { lp, li, ld, lo } = self.limits;
 
         let error = self.target - measurement;
-        let p_term = constrain!(kp * error, -lp, lp);
-        let i_term = if ki > 0. {
+        let p_term = constrain!(self.kp * error, -lp, lp);
+        let i_term = if self.ki > 0. {
             (self.integral as f64
-                + (ki * dt * (error as f64 + self.error_prev as f64) as f32) as f64)
+                + (self.ki * dt * (error as f64 + self.error_prev as f64) as f32) as f64)
                 as f32
         } else {
             0.
         };
         let i_term = constrain!(i_term, -li, li);
-        let d_term = if kd > 0. {
-            kd * (error as f64 - self.error_prev as f64) as f32 / dt
+        let d_term = if self.kd > 0. {
+            self.kd * (error as f64 - self.error_prev as f64) as f32 / dt
         } else {
             0.
         };
