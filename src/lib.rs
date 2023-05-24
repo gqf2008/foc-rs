@@ -179,7 +179,7 @@ impl Observer for NoneObserver {
     }
 }
 
-//电流反馈器
+//电流反馈
 pub trait Feedback {
     type Output;
     fn phase_current(&mut self) -> Self::Output;
@@ -200,7 +200,7 @@ pub trait Regulator {
     //设置目标
     fn set_point(&mut self, setpoint: Self::Input) -> &mut Self;
     //更新测量值，dt表示时间隔
-    fn update(&mut self, measurement: Self::Input, dt: f32) -> &mut Self;
+    fn update(&mut self, measurement: Self::Input, timestamp_us: i64) -> &mut Self;
     //获取输出
     fn output(&mut self) -> Self::Output;
 
