@@ -2,8 +2,6 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-use std::println;
-
 use crate::{constrain, Regulator};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -206,9 +204,7 @@ impl Regulator for Pid {
         };
 
         let i_term = if self.ki > 0. {
-            (self.integral as f64
-                + (self.ki * dt * 0.5 * (error as f64 + self.error_prev as f64) as f32) as f64)
-                as f32
+            (self.integral as f64 + (self.ki * dt * 0.5 * error) as f64) as f32
         } else {
             0.
         };
@@ -237,7 +233,6 @@ impl Regulator for Pid {
         } else {
             output
         };
-        println!("pid:{p_term},{i_term},{d_term},{output}");
         if self.ramp > 0. {
             let output_rate = (output as f64 - self.output_prev as f64) as f32 / dt;
             if output_rate > self.ramp {
