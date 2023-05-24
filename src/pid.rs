@@ -195,7 +195,7 @@ impl Regulator for Pid {
         let dt = if dt <= 0. || dt > 0.5 { 0.001 } else { dt };
 
         let Limit { lp, li, ld, lo } = self.limits;
-
+        // BUG ESP32 rust工具链处理f32可能会出现意外结果
         let error = (self.target as f64 - measurement as f64) as f32;
         let p_term = if let Some(lp) = lp {
             constrain!(self.kp * error, -lp, lp)
