@@ -2,7 +2,7 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-use crate::{constrain, Regulator};
+use crate::{addf32, constrain, Regulator};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Limit {
@@ -12,92 +12,88 @@ pub struct Limit {
     lo: Option<f32>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Output {
-    pub p: f32,
-    pub i: f32,
-    pub d: f32,
-    lo: Option<f32>,
-    prev: f32,
-    ramp: f32,
-    dt: f32,
-}
+// #[derive(Clone, Copy, Debug, Default)]
+// pub struct Output {
+//     pub p: f32,
+//     pub i: f32,
+//     pub d: f32,
+//     lo: Option<f32>,
+//     prev: f32,
+//     ramp: f32,
+//     dt: f32,
+// }
 
-impl Output {
-    pub fn pid(&mut self) -> f32 {
-        let mut output = if let Some(lo) = self.lo {
-            constrain!(
-                (self.p as f64 + self.i as f64 + self.d as f64) as f32,
-                -lo,
-                lo
-            )
-        } else {
-            (self.p as f64 + self.i as f64 + self.d as f64) as f32
-        };
-        if self.ramp > 0. {
-            let output_rate = (output as f64 - self.prev as f64) as f32 / self.dt;
-            if output_rate > self.ramp {
-                output = (self.prev as f64 + (self.ramp * self.dt) as f64) as f32;
-            } else if output_rate < -self.ramp {
-                output = (self.prev as f64 - (self.ramp * self.dt) as f64) as f32;
-            }
-        }
-        self.prev = output;
-        output
-    }
+// impl Output {
+//     pub fn pid(&mut self) -> f32 {
+//         let mut output = if let Some(lo) = self.lo {
+//             constrain!(addf32!(self.p, self.i, self.d), -lo, lo)
+//         } else {
+//             (self.p as f64 + self.i as f64 + self.d as f64) as f32
+//         };
+//         if self.ramp > 0. {
+//             let output_rate = (output as f64 - self.prev as f64) as f32 / self.dt;
+//             if output_rate > self.ramp {
+//                 output = (self.prev as f64 + (self.ramp * self.dt) as f64) as f32;
+//             } else if output_rate < -self.ramp {
+//                 output = (self.prev as f64 - (self.ramp * self.dt) as f64) as f32;
+//             }
+//         }
+//         self.prev = output;
+//         output
+//     }
 
-    pub fn pi(&mut self) -> f32 {
-        let mut output = if let Some(lo) = self.lo {
-            constrain!((self.p as f64 + self.i as f64) as f32, -lo, lo)
-        } else {
-            (self.p as f64 + self.i as f64) as f32
-        };
-        if self.ramp > 0. {
-            let output_rate = (output as f64 - self.prev as f64) as f32 / self.dt;
-            if output_rate > self.ramp {
-                output = (self.prev as f64 + (self.ramp * self.dt) as f64) as f32;
-            } else if output_rate < -self.ramp {
-                output = (self.prev as f64 - (self.ramp * self.dt) as f64) as f32;
-            }
-        }
-        self.prev = output;
-        output
-    }
+//     pub fn pi(&mut self) -> f32 {
+//         let mut output = if let Some(lo) = self.lo {
+//             constrain!((self.p as f64 + self.i as f64) as f32, -lo, lo)
+//         } else {
+//             (self.p as f64 + self.i as f64) as f32
+//         };
+//         if self.ramp > 0. {
+//             let output_rate = (output as f64 - self.prev as f64) as f32 / self.dt;
+//             if output_rate > self.ramp {
+//                 output = (self.prev as f64 + (self.ramp * self.dt) as f64) as f32;
+//             } else if output_rate < -self.ramp {
+//                 output = (self.prev as f64 - (self.ramp * self.dt) as f64) as f32;
+//             }
+//         }
+//         self.prev = output;
+//         output
+//     }
 
-    pub fn pd(&mut self) -> f32 {
-        let mut output = if let Some(lo) = self.lo {
-            constrain!((self.p as f64 + self.d as f64) as f32, -lo, lo)
-        } else {
-            (self.p as f64 + self.d as f64) as f32
-        };
-        if self.ramp > 0. {
-            let output_rate = (output as f64 - self.prev as f64) as f32 / self.dt;
-            if output_rate > self.ramp {
-                output = (self.prev as f64 + (self.ramp * self.dt) as f64) as f32;
-            } else if output_rate < -self.ramp {
-                output = (self.prev as f64 - (self.ramp * self.dt) as f64) as f32;
-            }
-        }
-        self.prev = output;
-        output
-    }
-}
+//     pub fn pd(&mut self) -> f32 {
+//         let mut output = if let Some(lo) = self.lo {
+//             constrain!((self.p as f64 + self.d as f64) as f32, -lo, lo)
+//         } else {
+//             (self.p as f64 + self.d as f64) as f32
+//         };
+//         if self.ramp > 0. {
+//             let output_rate = (output as f64 - self.prev as f64) as f32 / self.dt;
+//             if output_rate > self.ramp {
+//                 output = (self.prev as f64 + (self.ramp * self.dt) as f64) as f32;
+//             } else if output_rate < -self.ramp {
+//                 output = (self.prev as f64 - (self.ramp * self.dt) as f64) as f32;
+//             }
+//         }
+//         self.prev = output;
+//         output
+//     }
+// }
 
-impl core::ops::Mul<f32> for Output {
-    type Output = Output;
+// impl core::ops::Mul<f32> for Output {
+//     type Output = Output;
 
-    fn mul(self, rhs: f32) -> Self {
-        Output {
-            p: self.p * rhs,
-            i: self.i * rhs,
-            d: self.d * rhs,
-            lo: self.lo,
-            dt: 0.,
-            ramp: self.ramp,
-            prev: self.prev,
-        }
-    }
-}
+//     fn mul(self, rhs: f32) -> Self {
+//         Output {
+//             p: self.p * rhs,
+//             i: self.i * rhs,
+//             d: self.d * rhs,
+//             lo: self.lo,
+//             dt: 0.,
+//             ramp: self.ramp,
+//             prev: self.prev,
+//         }
+//     }
+// }
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Pid {
@@ -196,7 +192,7 @@ impl Regulator for Pid {
 
         let Limit { lp, li, ld, lo } = self.limits;
         // BUG ESP32 rust工具链处理f32可能会出现意外结果
-        let error = (self.target as f64 - measurement as f64) as f32;
+        let error = addf32!(self.target, -measurement);
         let p_term = if let Some(lp) = lp {
             constrain!(self.kp * error, -lp, lp)
         } else {
@@ -204,7 +200,7 @@ impl Regulator for Pid {
         };
 
         let i_term = if self.ki > 0. {
-            (self.integral as f64 + (self.ki * dt * error) as f64) as f32
+            addf32!(self.integral, self.ki * dt * error)
         } else {
             0.
         };
@@ -215,7 +211,7 @@ impl Regulator for Pid {
             i_term
         };
         let d_term = if self.kd > 0. {
-            self.kd * (error as f64 - self.error_prev as f64) as f32 / dt
+            self.kd * addf32!(error, -self.error_prev) / dt
         } else {
             0.
         };
@@ -226,7 +222,7 @@ impl Regulator for Pid {
             d_term
         };
 
-        let output = (p_term as f64 + i_term as f64 + d_term as f64) as f32;
+        let output = addf32!(p_term, i_term, d_term);
 
         let mut output = if let Some(lo) = lo {
             constrain!(output, -lo, lo)
@@ -234,11 +230,11 @@ impl Regulator for Pid {
             output
         };
         if self.ramp > 0. {
-            let output_rate = (output as f64 - self.output_prev as f64) as f32 / dt;
+            let output_rate = addf32!(output, -self.output_prev) / dt;
             if output_rate > self.ramp {
-                output = (self.output_prev as f64 + (self.ramp * dt) as f64) as f32;
+                output = addf32!(self.output_prev, self.ramp * dt);
             } else if output_rate < -self.ramp {
-                output = (self.output_prev as f64 - (self.ramp * dt) as f64) as f32;
+                output = addf32!(self.output_prev, -(self.ramp * dt));
             }
         }
         self.error_prev = error;
