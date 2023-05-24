@@ -2,32 +2,24 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
+use std::println;
+
 use crate::{constrain, Regulator};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Limit {
-    lp: f32,
-    li: f32,
-    ld: f32,
-    lo: f32,
+    lp: Option<f32>,
+    li: Option<f32>,
+    ld: Option<f32>,
+    lo: Option<f32>,
 }
 
-impl Default for Limit {
-    fn default() -> Self {
-        Self {
-            lp: f32::MAX,
-            li: f32::MAX,
-            ld: f32::MAX,
-            lo: f32::MAX,
-        }
-    }
-}
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Output {
     pub p: f32,
     pub i: f32,
     pub d: f32,
-    lo: f32,
+    lo: Option<f32>,
     prev: f32,
     ramp: f32,
     dt: f32,
@@ -35,7 +27,15 @@ pub struct Output {
 
 impl Output {
     pub fn pid(&mut self) -> f32 {
-        let mut output = constrain!(self.p + self.i + self.d, -self.lo, self.lo);
+        let mut output = if let Some(lo) = self.lo {
+            constrain!(
+                (self.p as f64 + self.i as f64 + self.d as f64) as f32,
+                -lo,
+                lo
+            )
+        } else {
+            (self.p as f64 + self.i as f64 + self.d as f64) as f32
+        };
         if self.ramp > 0. {
             let output_rate = (output as f64 - self.prev as f64) as f32 / self.dt;
             if output_rate > self.ramp {
@@ -49,7 +49,11 @@ impl Output {
     }
 
     pub fn pi(&mut self) -> f32 {
-        let mut output = constrain!(self.p + self.i, -self.lo, self.lo);
+        let mut output = if let Some(lo) = self.lo {
+            constrain!((self.p as f64 + self.i as f64) as f32, -lo, lo)
+        } else {
+            (self.p as f64 + self.i as f64) as f32
+        };
         if self.ramp > 0. {
             let output_rate = (output as f64 - self.prev as f64) as f32 / self.dt;
             if output_rate > self.ramp {
@@ -63,7 +67,11 @@ impl Output {
     }
 
     pub fn pd(&mut self) -> f32 {
-        let mut output = constrain!(self.p + self.d, -self.lo, self.lo);
+        let mut output = if let Some(lo) = self.lo {
+            constrain!((self.p as f64 + self.d as f64) as f32, -lo, lo)
+        } else {
+            (self.p as f64 + self.d as f64) as f32
+        };
         if self.ramp > 0. {
             let output_rate = (output as f64 - self.prev as f64) as f32 / self.dt;
             if output_rate > self.ramp {
@@ -103,7 +111,9 @@ pub struct Pid {
     integral: f32,
     error_prev: f32,
     timestamp_prev: i64,
-    pub output: Output,
+    output_prev: f32,
+    ramp: f32,
+    pub output: f32,
     _private: (),
 }
 
@@ -118,25 +128,25 @@ impl Pid {
         }
     }
     pub fn limit_p(mut self, lp: f32) -> Self {
-        self.limits.lp = lp;
+        self.limits.lp = Some(lp);
         self
     }
     pub fn limit_i(mut self, li: f32) -> Self {
-        self.limits.li = li;
+        self.limits.li = Some(li);
         self
     }
     pub fn limit_d(mut self, ld: f32) -> Self {
-        self.limits.ld = ld;
+        self.limits.ld = Some(ld);
         self
     }
 
     pub fn limit_out(mut self, lo: f32) -> Self {
-        self.limits.lo = lo;
+        self.limits.lo = Some(lo);
         self
     }
 
     pub fn ramp(mut self, ramp: f32) -> Self {
-        self.output.ramp = ramp;
+        self.ramp = ramp;
         self
     }
 }
@@ -175,7 +185,7 @@ impl Pid {
 
 impl Regulator for Pid {
     type Input = f32;
-    type Output = Output;
+    type Output = f32;
     fn set_point(&mut self, target: f32) -> &mut Self {
         self.target = target;
         self
@@ -188,8 +198,13 @@ impl Regulator for Pid {
 
         let Limit { lp, li, ld, lo } = self.limits;
 
-        let error = self.target - measurement;
-        let p_term = constrain!(self.kp * error, -lp, lp);
+        let error = (self.target as f64 - measurement as f64) as f32;
+        let p_term = if let Some(lp) = lp {
+            constrain!(self.kp * error, -lp, lp)
+        } else {
+            self.kp * error
+        };
+
         let i_term = if self.ki > 0. {
             (self.integral as f64
                 + (self.ki * dt * 0.5 * (error as f64 + self.error_prev as f64) as f32) as f64)
@@ -197,45 +212,55 @@ impl Regulator for Pid {
         } else {
             0.
         };
-        let i_term = constrain!(i_term, -li, li);
+
+        let i_term = if let Some(li) = li {
+            constrain!(i_term, -li, li)
+        } else {
+            i_term
+        };
         let d_term = if self.kd > 0. {
             self.kd * (error as f64 - self.error_prev as f64) as f32 / dt
         } else {
             0.
         };
-        let d_term = constrain!(d_term, -ld, ld);
 
-        self.output = Output {
-            p: p_term,
-            i: i_term,
-            d: d_term,
-            lo,
-            dt,
-            ramp: self.output.ramp,
-            prev: self.output.prev,
+        let d_term = if let Some(ld) = ld {
+            constrain!(d_term, -ld, ld)
+        } else {
+            d_term
         };
 
+        let output = (p_term as f64 + i_term as f64 + d_term as f64) as f32;
+
+        let mut output = if let Some(lo) = lo {
+            constrain!(output, -lo, lo)
+        } else {
+            output
+        };
+        println!("pid:{p_term},{i_term},{d_term},{output}");
+        if self.ramp > 0. {
+            let output_rate = (output as f64 - self.output_prev as f64) as f32 / dt;
+            if output_rate > self.ramp {
+                output = (self.output_prev as f64 + (self.ramp * dt) as f64) as f32;
+            } else if output_rate < -self.ramp {
+                output = (self.output_prev as f64 - (self.ramp * dt) as f64) as f32;
+            }
+        }
         self.error_prev = error;
         self.integral = i_term;
+        self.output_prev = output;
+        self.output = output;
         self
     }
 
-    fn output(&mut self) -> Output {
+    fn output(&mut self) -> f32 {
         self.output
     }
 
     fn reset(&mut self) -> &mut Self {
         self.integral = 0.;
         self.error_prev = 0.;
-        self.output = Output {
-            p: 0.,
-            i: 0.,
-            d: 0.,
-            prev: 0.,
-            dt: 0.,
-            ramp: self.output.ramp,
-            lo: self.limits.lo,
-        };
+        self.output = 0.;
         self
     }
 }

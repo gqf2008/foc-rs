@@ -1,7 +1,7 @@
 //!定义了FOC控制中控制模块、调制模块、反馈模块、传感器模块的抽象定义，
 //! 实现了park、clarke变换和正弦调制、空间矢量调制算法
 
-#![no_std]
+// #![no_std]
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]

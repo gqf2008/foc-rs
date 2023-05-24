@@ -71,7 +71,7 @@ impl Pid {
         } else {
             output
         };
-
+        println!("fpid:{proportional},{integral},{derivative},{output}");
         if self.output_ramp > 0. {
             let output_rate = (output as f64 - self.output_prev as f64) as f32 / ts;
             if output_rate > self.output_ramp {
