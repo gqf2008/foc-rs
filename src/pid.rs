@@ -24,9 +24,9 @@ impl Default for Limit {
 }
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Output {
-    p: f32,
-    i: f32,
-    d: f32,
+    pub p: f32,
+    pub i: f32,
+    pub d: f32,
     lo: f32,
     prev: f32,
     ramp: f32,
