@@ -176,7 +176,7 @@ impl Regulator for Pid {
         let p_term = constrain!(self.kp * error, -lp, lp);
         let i_term = if self.ki > 0. {
             (self.integral as f64
-                + (self.ki * dt * 0.5 * (error as f64 + self.error_prev as f64) as f32) as f64)
+                + (self.ki * dt * (error as f64 + self.error_prev as f64) as f32) as f64)
                 as f32
         } else {
             0.
