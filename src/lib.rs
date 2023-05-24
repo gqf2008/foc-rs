@@ -7,6 +7,7 @@
 #![allow(non_snake_case)]
 #![feature(associated_type_defaults)]
 
+pub mod fpid;
 pub mod lpf;
 pub mod pid;
 

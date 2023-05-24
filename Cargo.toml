@@ -6,4 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
- libm = "0.2.6"
+libm = "0.2.6"
+
+[dev-dependencies]
+chrono="0.4.24"
