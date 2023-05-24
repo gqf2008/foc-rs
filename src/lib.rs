@@ -7,6 +7,9 @@
 #![allow(non_snake_case)]
 #![feature(associated_type_defaults)]
 
+pub mod lpf;
+pub mod pid;
+
 use core::panic;
 
 pub const PI_1_3: f32 = 1.0471975512;
@@ -21,6 +24,23 @@ pub const _1_SQRT_3: f32 = 0.57735026919;
 pub const SQRT_3_2: f32 = 0.86602540378;
 pub const SQRT_3: f32 = 1.73205080757;
 pub const SQRT_2: f32 = 1.41421356237;
+
+pub const MIN_ANGLE_DETECT_MOVEMENT: f32 = _2PI / 101.0;
+pub const DEF_PID_CURR_P: f32 = 3.;
+pub const DEF_PID_CURR_I: f32 = 300.;
+pub const DEF_PID_CURR_D: f32 = 0.;
+pub const DEF_PID_CURR_RAMP: f32 = 30.;
+pub const DEF_POWER_SUPPLY: f32 = 12.;
+pub const DEF_CURR_FILTER_Tf: f32 = 0.005;
+
+pub const DEF_PID_VEL_P: f32 = 0.5;
+pub const DEF_PID_VEL_I: f32 = 10.0;
+pub const DEF_PID_VEL_D: f32 = 0.0;
+pub const DEF_PID_VEL_RAMP: f32 = 1000.0;
+pub const DEF_PID_VEL_LIMIT: f32 = DEF_POWER_SUPPLY;
+
+pub const DEF_P_ANGLE_P: f32 = 20.0;
+pub const DEF_VEL_LIM: f32 = 20.0;
 
 #[macro_export]
 macro_rules! constrain {
@@ -231,7 +251,7 @@ impl Regulator for NoneRegulator {
     fn set_point(&mut self, _setpoint: Self::Input) -> &mut Self {
         self
     }
-    fn update(&mut self, _measurement: Self::Input, _dt: f32) -> &mut Self {
+    fn update(&mut self, _measurement: Self::Input, _timestamp_now_us: i64) -> &mut Self {
         self
     }
 }
@@ -262,9 +282,9 @@ impl<T: Regulator, U: Regulator<Input = T::Output>> Regulator for Chain<T, U> {
         self.first.set_point(target);
         self
     }
-    fn update(&mut self, measurement: Self::Input, dt: f32) -> &mut Self {
-        let output = self.first.update(measurement, dt).output();
-        self.second.update(output, dt);
+    fn update(&mut self, measurement: Self::Input, timestamp_now_us: i64) -> &mut Self {
+        let output = self.first.update(measurement, timestamp_now_us).output();
+        self.second.update(output, timestamp_now_us);
         self
     }
     fn output(&mut self) -> Self::Output {
