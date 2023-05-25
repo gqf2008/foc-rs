@@ -106,12 +106,11 @@ pub struct Pid {
     kd: f32,
     limits: Limit,
     target: f32,
-    integral: f32,
-    error_prev: f32,
-    timestamp_prev: i64,
-    output_prev: f32,
+    integral: f32, //最后的误差积分
+    error: f32,    //最后的误差
+    timestamp: i64,
     ramp: f32,
-    pub output: f32,
+    pub output: f32, //最后的输出
     _private: (),
 }
 
@@ -189,61 +188,74 @@ impl Regulator for Pid {
         self
     }
 
-    fn update(&mut self, measurement: f32, timestamp_now_us: i64) -> &mut Self {
-        let dt = (timestamp_now_us - self.timestamp_prev) as f32 / 1000000.;
-        self.timestamp_prev = timestamp_now_us;
+    //计算过程
+    //1. 计算dt
+    //2. 计算误差=目标值-测量值
+    //3. 计算积分项=误差的积分（最后的积分项+误差*dt）
+    //4. 计算微分项=误差的微分（(误差-最后的误差)/dt）
+    //5. 计算PID输出=比例系数*误差+积分系数*误差的积分项+微分系数*误差的微分项
+    //6. 根据斜率控制PID输出
+    //7. 保存误差和输出值
+    fn update(&mut self, measured: f32, timestamp_now_us: i64) -> &mut Self {
+        let dt = (timestamp_now_us - self.timestamp) as f32 / 1000000.;
+        self.timestamp = timestamp_now_us;
         let dt = if dt <= 0. || dt > 0.5 { 0.001 } else { dt };
-
         let Limit { lp, li, ld, lo } = self.limits;
         // BUG ESP32 rust工具链处理f32可能会出现意外结果
-        let error = (self.target as f64 - measurement as f64) as f32;
-        let p_term = if let Some(lp) = lp {
-            constrain!(self.kp * error, -lp, lp)
-        } else {
-            self.kp * error
-        };
-
-        let i_term = if self.ki > 0. {
-            (self.integral as f64 + (self.ki * dt * error) as f64) as f32
-        } else {
-            0.
-        };
-
-        let i_term = if let Some(li) = li {
-            constrain!(i_term, -li, li)
-        } else {
-            i_term
-        };
-        let d_term = if self.kd > 0. {
-            self.kd * (error as f64 - self.error_prev as f64) as f32 / dt
+        //计算误差
+        let error = (self.target as f64 - measured as f64) as f32;
+        // 比例项=比例系数（kp）*误差（error）
+        let p = if self.kp > 0. {
+            let p = self.kp * error;
+            if let Some(lp) = lp {
+                constrain!(p, -lp, lp)
+            } else {
+                p
+            }
         } else {
             0.
         };
-
-        let d_term = if let Some(ld) = ld {
-            constrain!(d_term, -ld, ld)
+        // 积分项=积分系数（ki）* (积分项+误差*dt)
+        let i = if self.ki > 0. {
+            self.integral = (self.integral as f64 + (dt * error) as f64) as f32;
+            let i = self.ki * self.integral;
+            if let Some(li) = li {
+                constrain!(i, -li, li)
+            } else {
+                i
+            }
         } else {
-            d_term
+            0.
         };
-
-        let output = (p_term as f64 + i_term as f64 + d_term as f64) as f32;
-
+        // 微分项=微分系数（kd）* (误差-最后的误差)/dt
+        let d = if self.kd > 0. {
+            let d = (error as f64 - self.error as f64) as f32 / dt;
+            let d = self.kd * d;
+            if let Some(ld) = ld {
+                constrain!(d, -ld, ld)
+            } else {
+                d
+            }
+        } else {
+            0.
+        };
+        //pid输出
+        let output = (p as f64 + i as f64 + d as f64) as f32;
         let mut output = if let Some(lo) = lo {
             constrain!(output, -lo, lo)
         } else {
             output
         };
+        //输出环节斜率控制
         if self.ramp > 0. {
-            let output_rate = (output as f64 - self.output_prev as f64) as f32 / dt;
+            let output_rate = (output as f64 - self.output as f64) as f32 / dt;
             if output_rate > self.ramp {
-                output = (self.output_prev as f64 + (self.ramp * dt) as f64) as f32;
+                output = (self.output as f64 + (self.ramp * dt) as f64) as f32;
             } else if output_rate < -self.ramp {
-                output = (self.output_prev as f64 - (self.ramp * dt) as f64) as f32;
+                output = (self.output as f64 - (self.ramp * dt) as f64) as f32;
             }
         }
-        self.error_prev = error;
-        self.integral = i_term;
-        self.output_prev = output;
+        self.error = error;
         self.output = output;
         self
     }
@@ -254,7 +266,7 @@ impl Regulator for Pid {
 
     fn reset(&mut self) -> &mut Self {
         self.integral = 0.;
-        self.error_prev = 0.;
+        self.error = 0.;
         self.output = 0.;
         self
     }
