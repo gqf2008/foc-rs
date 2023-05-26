@@ -87,23 +87,25 @@ pub trait Driver {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Target {
-    //闭环力矩控制，牛米
+pub enum Motion {
+    //力矩控制，牛米
     Torque(f32),
-    //闭环速度控制，弧度/秒
+    //速度控制，弧度/秒
     Velocity(f32),
-    //闭环位置控制(angle)
+    //位置控制(angle)
     Position(f32),
-    //开环速度控制(rad/s)
-    VelocityOpenLoop(f32),
-    //开环位置控制(rad)
-    PositionOpenLoop(f32),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Target {
+    CloseLoop(Motion),
+    OpenLoop(Motion),
 }
 
 impl Target {
     pub fn is_openloop(&self) -> bool {
         match self {
-            Target::PositionOpenLoop(_) | Target::VelocityOpenLoop(_) => true,
+            Target::OpenLoop(_) => true,
             _ => false,
         }
     }
