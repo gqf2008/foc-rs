@@ -98,14 +98,14 @@ pub enum Motion {
 
 #[derive(Debug, Clone, Copy)]
 pub enum Target {
-    CloseLoop(Motion),
-    OpenLoop(Motion),
+    Closeloop(Motion),
+    Openloop(Motion),
 }
 
 impl Target {
     pub fn is_openloop(&self) -> bool {
         match self {
-            Target::OpenLoop(_) => true,
+            Target::Openloop(_) => true,
             _ => false,
         }
     }
