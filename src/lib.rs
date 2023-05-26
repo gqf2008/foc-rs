@@ -12,7 +12,6 @@ pub mod lpf;
 pub mod pid;
 
 use core::panic;
-
 pub const PI_1_3: f32 = 1.0471975512;
 pub const PI: f32 = 3.14159265359;
 pub const PI_2: f32 = 1.57079632679;
