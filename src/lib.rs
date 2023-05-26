@@ -98,6 +98,7 @@ pub enum Motion {
 
 #[derive(Debug, Clone, Copy)]
 pub enum Target {
+    //
     Closeloop(Motion),
     Openloop(Motion),
 }
