@@ -706,3 +706,65 @@ impl core::ops::Div<f32> for Voltage {
         self.mul(rhs.recip())
     }
 }
+
+impl Current {
+    pub fn recip(self) -> Self {
+        match self {
+            Self::Dq(a, b) => Current::Dq(a.recip(), b.recip()),
+            Self::αβ(a, b) => Current::αβ(a.recip(), b.recip()),
+            Self::Phase(a, b, c) => Current::Phase(a.recip(), b.recip(), c.recip()),
+        }
+    }
+}
+impl core::ops::Add<Self> for Current {
+    type Output = Self;
+    fn add(self, rhs: Current) -> Self::Output {
+        match self {
+            Self::Dq(d, q) => match rhs {
+                Self::Dq(a, b) => Current::Dq(d + a, q + b),
+                Self::αβ(a, b) => Current::Dq(d + a, q + b),
+                Self::Phase(a, b, _) => Current::Dq(d + a, q + b),
+            },
+            Self::αβ(α, β) => match rhs {
+                Self::Dq(a, b) => Current::αβ(α + a, β + b),
+                Self::αβ(a, b) => Current::αβ(α + a, β + b),
+                Self::Phase(a, b, _) => Current::αβ(α + a, β + b),
+            },
+            Self::Phase(a, b, c) => match rhs {
+                Self::Dq(a1, b1) => Current::Phase(a + a1, a + b1, c),
+                Self::αβ(a1, b1) => Current::Phase(a + a1, a + b1, c),
+                Self::Phase(a1, b1, c1) => Current::Phase(a + a1, a + b1, c + c1),
+            },
+        }
+    }
+}
+
+impl core::ops::Mul<Self> for Current {
+    type Output = Self;
+    fn mul(self, rhs: Current) -> Self::Output {
+        match self {
+            Self::Dq(d, q) => match rhs {
+                Self::Dq(a, b) => Current::Dq(d * a, q * b),
+                Self::αβ(a, b) => Current::Dq(d * a, q * b),
+                Self::Phase(a, b, _) => Current::Dq(d * a, q * b),
+            },
+            Self::αβ(α, β) => match rhs {
+                Self::Dq(a, b) => Current::αβ(α * a, β * b),
+                Self::αβ(a, b) => Current::αβ(α * a, β * b),
+                Self::Phase(a, b, _) => Current::αβ(α * a, β * b),
+            },
+            Self::Phase(a, b, c) => match rhs {
+                Self::Dq(a1, b1) => Current::Phase(a * a1, a * b1, c),
+                Self::αβ(a1, b1) => Current::Phase(a * a1, a * b1, c),
+                Self::Phase(a1, b1, c1) => Current::Phase(a * a1, a * b1, c * c1),
+            },
+        }
+    }
+}
+
+impl core::ops::Div<Self> for Current {
+    type Output = Self;
+    fn div(self, rhs: Current) -> Self::Output {
+        self * rhs.recip()
+    }
+}
