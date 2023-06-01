@@ -740,6 +740,12 @@ impl core::ops::Add<Self> for Current {
     }
 }
 
+impl core::ops::AddAssign<Self> for Current {
+    fn add_assign(&mut self, rhs: Current) {
+        *self = *self + rhs
+    }
+}
+
 impl core::ops::Sub<Self> for Current {
     type Output = Self;
     fn sub(self, rhs: Current) -> Self::Output {
@@ -760,6 +766,12 @@ impl core::ops::Sub<Self> for Current {
                 Self::Phase(a1, b1, c1) => Current::Phase(a - a1, a - b1, c - c1),
             },
         }
+    }
+}
+
+impl core::ops::SubAssign<Self> for Current {
+    fn sub_assign(&mut self, rhs: Current) {
+        *self = *self - rhs
     }
 }
 
@@ -786,9 +798,21 @@ impl core::ops::Mul<Self> for Current {
     }
 }
 
+impl core::ops::MulAssign<Self> for Current {
+    fn mul_assign(&mut self, rhs: Current) {
+        *self = *self * rhs
+    }
+}
+
 impl core::ops::Div<Self> for Current {
     type Output = Self;
     fn div(self, rhs: Current) -> Self::Output {
         self * rhs.recip()
+    }
+}
+
+impl core::ops::DivAssign<Self> for Current {
+    fn div_assign(&mut self, rhs: Current) {
+        *self = *self / rhs
     }
 }
