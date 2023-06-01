@@ -716,6 +716,7 @@ impl Current {
         }
     }
 }
+
 impl core::ops::Add<Self> for Current {
     type Output = Self;
     fn add(self, rhs: Current) -> Self::Output {
@@ -734,6 +735,29 @@ impl core::ops::Add<Self> for Current {
                 Self::Dq(a1, b1) => Current::Phase(a + a1, a + b1, c),
                 Self::αβ(a1, b1) => Current::Phase(a + a1, a + b1, c),
                 Self::Phase(a1, b1, c1) => Current::Phase(a + a1, a + b1, c + c1),
+            },
+        }
+    }
+}
+
+impl core::ops::Sub<Self> for Current {
+    type Output = Self;
+    fn sub(self, rhs: Current) -> Self::Output {
+        match self {
+            Self::Dq(d, q) => match rhs {
+                Self::Dq(a, b) => Current::Dq(d - a, q - b),
+                Self::αβ(a, b) => Current::Dq(d - a, q - b),
+                Self::Phase(a, b, _) => Current::Dq(d - a, q - b),
+            },
+            Self::αβ(α, β) => match rhs {
+                Self::Dq(a, b) => Current::αβ(α - a, β - b),
+                Self::αβ(a, b) => Current::αβ(α - a, β - b),
+                Self::Phase(a, b, _) => Current::αβ(α - a, β - b),
+            },
+            Self::Phase(a, b, c) => match rhs {
+                Self::Dq(a1, b1) => Current::Phase(a - a1, a - b1, c),
+                Self::αβ(a1, b1) => Current::Phase(a - a1, a - b1, c),
+                Self::Phase(a1, b1, c1) => Current::Phase(a - a1, a - b1, c - c1),
             },
         }
     }
