@@ -6,80 +6,76 @@ use crate::{constrain, Regulator};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Limit {
-    lp: Option<f32>,
-    li: Option<f32>,
-    ld: Option<f32>,
-    lo: Option<f32>,
+    lp: Option<f64>,
+    li: Option<f64>,
+    ld: Option<f64>,
+    lo: Option<f64>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Output {
-    pub p: f32,
-    pub i: f32,
-    pub d: f32,
-    lo: Option<f32>,
-    prev: f32,
-    ramp: f32,
-    dt: f32,
+    pub p: f64,
+    pub i: f64,
+    pub d: f64,
+    lo: Option<f64>,
+    prev: f64,
+    ramp: f64,
+    dt: f64,
 }
 
 impl Output {
     pub fn pid(&mut self) -> f32 {
         let mut output = if let Some(lo) = self.lo {
-            constrain!(
-                (self.p as f64 + self.i as f64 + self.d as f64) as f32,
-                -lo,
-                lo
-            )
+            constrain!(self.p + self.i + self.d, -lo, lo)
         } else {
-            (self.p as f64 + self.i as f64 + self.d as f64) as f32
+            self.p + self.i + self.d
         };
         if self.ramp > 0. {
-            let output_rate = (output as f64 - self.prev as f64) as f32 / self.dt;
+            let output_rate = (output - self.prev) / self.dt;
             if output_rate > self.ramp {
-                output = (self.prev as f64 + (self.ramp * self.dt) as f64) as f32;
+                output = self.prev + (self.ramp * self.dt);
             } else if output_rate < -self.ramp {
-                output = (self.prev as f64 - (self.ramp * self.dt) as f64) as f32;
+                output = self.prev - (self.ramp * self.dt);
             }
         }
         self.prev = output;
-        output
+        output as f32
     }
 
     pub fn pi(&mut self) -> f32 {
         let mut output = if let Some(lo) = self.lo {
-            constrain!((self.p as f64 + self.i as f64) as f32, -lo, lo)
+            constrain!(self.p + self.i, -lo, lo)
         } else {
-            (self.p as f64 + self.i as f64) as f32
+            self.p + self.i
         };
         if self.ramp > 0. {
-            let output_rate = (output as f64 - self.prev as f64) as f32 / self.dt;
+            let output_rate = (output - self.prev) / self.dt;
             if output_rate > self.ramp {
-                output = (self.prev as f64 + (self.ramp * self.dt) as f64) as f32;
+                output = self.prev + (self.ramp * self.dt);
             } else if output_rate < -self.ramp {
-                output = (self.prev as f64 - (self.ramp * self.dt) as f64) as f32;
+                output = self.prev - (self.ramp * self.dt);
             }
         }
         self.prev = output;
-        output
+        output as f32
     }
 
     pub fn pd(&mut self) -> f32 {
         let mut output = if let Some(lo) = self.lo {
-            constrain!((self.p as f64 + self.d as f64) as f32, -lo, lo)
+            constrain!(self.p + self.d, -lo, lo)
         } else {
-            (self.p as f64 + self.d as f64) as f32
+            self.p + self.d
         };
         if self.ramp > 0. {
-            let output_rate = (output as f64 - self.prev as f64) as f32 / self.dt;
+            let output_rate = (output - self.prev) / self.dt;
             if output_rate > self.ramp {
-                output = (self.prev as f64 + (self.ramp * self.dt) as f64) as f32;
+                output = self.prev + (self.ramp * self.dt);
             } else if output_rate < -self.ramp {
-                output = (self.prev as f64 - (self.ramp * self.dt) as f64) as f32;
+                output = self.prev - (self.ramp * self.dt);
             }
         }
         self.prev = output;
-        output
+        output as f32
     }
 }
 
@@ -87,6 +83,7 @@ impl core::ops::Mul<f32> for Output {
     type Output = Output;
 
     fn mul(self, rhs: f32) -> Self {
+        let rhs = rhs as f64;
         Output {
             p: self.p * rhs,
             i: self.i * rhs,
@@ -101,16 +98,16 @@ impl core::ops::Mul<f32> for Output {
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Pid {
-    kp: f32,
-    ki: f32,
-    kd: f32,
+    kp: f64,
+    ki: f64,
+    kd: f64,
     limits: Limit,
-    target: f32,
-    integral: f32, //最后的误差积分
-    error: f32,    //最后的误差
+    target: f64,
+    integral: f64, //最后的误差积分
+    error: f64,    //最后的误差
     timestamp: i64,
-    ramp: f32,
-    pub output: f32, //最后的输出
+    ramp: f64,
+    pub output: f64, //最后的输出
     _private: (),
 }
 
@@ -118,64 +115,64 @@ impl Pid {
     /// `integral_limit`: The maximum magnitude of the integral (anti-windup)
     pub fn new(kp: f32, ki: f32, kd: f32) -> Self {
         Pid {
-            kp,
-            ki,
-            kd,
+            kp: kp as f64,
+            ki: ki as f64,
+            kd: kd as f64,
             ..Default::default()
         }
     }
     pub fn limit_p(mut self, lp: f32) -> Self {
-        self.limits.lp = Some(lp);
+        self.limits.lp = Some(lp as f64);
         self
     }
     pub fn limit_i(mut self, li: f32) -> Self {
-        self.limits.li = Some(li);
+        self.limits.li = Some(li as f64);
         self
     }
     pub fn limit_d(mut self, ld: f32) -> Self {
-        self.limits.ld = Some(ld);
+        self.limits.ld = Some(ld as f64);
         self
     }
 
     pub fn limit_out(mut self, lo: f32) -> Self {
-        self.limits.lo = Some(lo);
+        self.limits.lo = Some(lo as f64);
         self
     }
 
     pub fn ramp(mut self, ramp: f32) -> Self {
-        self.ramp = ramp;
+        self.ramp = ramp as f64;
         self
     }
 }
 
 impl Pid {
     pub fn set_kpid(&mut self, kp: f32, ki: f32, kd: f32) -> &mut Self {
-        self.kp = kp;
-        self.ki = ki;
-        self.kd = kd;
+        self.kp = kp as f64;
+        self.ki = ki as f64;
+        self.kd = kd as f64;
         self
     }
     pub fn set_kpi(&mut self, kp: f32, ki: f32) -> &mut Self {
-        self.kp = kp;
-        self.ki = ki;
+        self.kp = kp as f64;
+        self.ki = ki as f64;
         self
     }
     pub fn set_kpd(&mut self, kp: f32, kd: f32) -> &mut Self {
-        self.kp = kp;
-        self.kd = kd;
+        self.kp = kp as f64;
+        self.kd = kd as f64;
         self
     }
     pub fn set_kp(&mut self, kp: f32) -> &mut Self {
-        self.kp = kp;
+        self.kp = kp as f64;
         self
     }
     pub fn set_ki(&mut self, ki: f32) -> &mut Self {
-        self.ki = ki;
+        self.ki = ki as f64;
         self
     }
 
     pub fn set_kd(&mut self, kd: f32) -> &mut Self {
-        self.kd = kd;
+        self.kd = kd as f64;
         self
     }
 }
@@ -184,7 +181,7 @@ impl Regulator for Pid {
     type Input = f32;
     type Output = f32;
     fn set_point(&mut self, target: f32) -> &mut Self {
-        self.target = target;
+        self.target = target as f64;
         self
     }
 
@@ -197,13 +194,14 @@ impl Regulator for Pid {
     //6. 根据斜率控制PID输出
     //7. 保存误差和输出值
     fn update(&mut self, measured: f32, timestamp_now_us: i64) -> &mut Self {
-        let dt = (timestamp_now_us - self.timestamp) as f32 / 1000000.;
+        let dt = (timestamp_now_us - self.timestamp) as f64 / 1000000.;
         self.timestamp = timestamp_now_us;
         let dt = if dt <= 0. || dt > 0.5 { 0.001 } else { dt };
         let Limit { lp, li, ld, lo } = self.limits;
         // BUG ESP32 rust工具链处理f32可能会出现意外结果
         //计算误差
-        let error = (self.target as f64 - measured as f64) as f32;
+        let measured = measured as f64;
+        let error = self.target - measured;
         // 比例项=比例系数（kp）*误差（error）
         let p = if self.kp > 0. {
             let p = self.kp * error;
@@ -217,7 +215,7 @@ impl Regulator for Pid {
         };
         // 积分项=积分系数（ki）* (积分项+误差*dt)
         let i = if self.ki > 0. {
-            self.integral = (self.integral as f64 + (dt * error) as f64) as f32;
+            self.integral = self.integral + (dt * error);
             let i = self.ki * self.integral;
             if let Some(li) = li {
                 constrain!(i, -li, li)
@@ -229,7 +227,7 @@ impl Regulator for Pid {
         };
         // 微分项=微分系数（kd）* (误差-最后的误差)/dt
         let d = if self.kd > 0. {
-            let d = (error as f64 - self.error as f64) as f32 / dt;
+            let d = (error - self.error) / dt;
             let d = self.kd * d;
             if let Some(ld) = ld {
                 constrain!(d, -ld, ld)
@@ -240,7 +238,7 @@ impl Regulator for Pid {
             0.
         };
         //pid输出
-        let output = (p as f64 + i as f64 + d as f64) as f32;
+        let output = p + i + d;
         let mut output = if let Some(lo) = lo {
             constrain!(output, -lo, lo)
         } else {
@@ -248,11 +246,11 @@ impl Regulator for Pid {
         };
         //输出环节斜率控制
         if self.ramp > 0. {
-            let output_rate = (output as f64 - self.output as f64) as f32 / dt;
+            let output_rate = (output - self.output) / dt;
             if output_rate > self.ramp {
-                output = (self.output as f64 + (self.ramp * dt) as f64) as f32;
+                output = self.output + (self.ramp * dt);
             } else if output_rate < -self.ramp {
-                output = (self.output as f64 - (self.ramp * dt) as f64) as f32;
+                output = self.output - (self.ramp * dt);
             }
         }
         self.error = error;
@@ -261,7 +259,7 @@ impl Regulator for Pid {
     }
 
     fn output(&mut self) -> f32 {
-        self.output
+        self.output as f32
     }
 
     fn reset(&mut self) -> &mut Self {

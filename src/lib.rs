@@ -345,20 +345,24 @@ impl Current {
 impl Current {
     pub fn clarke(self) -> Self {
         if let Self::Phase(ia, ib, _ic) = self {
+            let ia = ia as f64;
+            let ib = ib as f64;
             let α = ia;
-            let β = (ia + 2.0 * ib) * _1_SQRT_3;
-            return Self::αβ(α, β);
+            let β = (ia + 2.0 * ib) * _1_SQRT_3 as f64;
+            return Self::αβ(α as f32, β as f32);
         }
         panic!()
     }
 
     pub fn park(self, θ: f32) -> Self {
         if let Self::αβ(α, β) = self {
-            let cos = libm::cosf(θ);
-            let sin = libm::sinf(θ);
+            let α = α as f64;
+            let β = β as f64;
+            let cos = libm::cosf(θ) as f64;
+            let sin = libm::sinf(θ) as f64;
             let d = α * cos + β * sin;
             let q = -α * sin + β * cos;
-            return Self::Dq(d, q);
+            return Self::Dq(d as f32, q as f32);
         }
         panic!()
     }
@@ -448,35 +452,72 @@ impl Voltage {
     //逆Park变换
     pub fn ipark(self, θ: f32) -> Self {
         if let Self::Dq(d, q) = self {
-            let cos = libm::cosf(θ);
-            let sin = libm::sinf(θ);
+            let d = d as f64;
+            let q = q as f64;
+            let cos = libm::cosf(θ) as f64;
+            let sin = libm::sinf(θ) as f64;
             let α = cos * d - sin * q;
             let β = sin * d + cos * q;
-            return Self::αβ(α, β);
+            return Self::αβ(α as f32, β as f32);
         }
         panic!()
     }
     //逆Clarke变换
     pub fn iclarke(self) -> Self {
         if let Self::αβ(α, β) = self {
+            let α = α as f64;
+            let β = β as f64;
             let a = α;
-            let b = -α * 0.5 + SQRT_3_2 * β;
-            let c = -α * 0.5 - SQRT_3_2 * β;
-            return Self::Phase3(a, b, c);
+            let b = -α * 0.5 + SQRT_3_2 as f64 * β;
+            let c = -α * 0.5 - SQRT_3_2 as f64 * β;
+            return Self::Phase3(a as f32, b as f32, c as f32);
         }
         panic!()
     }
 
     pub fn add(self, offset: f32) -> Self {
+        let offset = offset as f64;
         match self {
-            Self::Phase3(a, b, c) => Self::Phase3(a + offset, b + offset, c + offset),
-            Self::Phase2(a, b) => Self::Phase2(a + offset, b + offset),
-            Self::Phase(u) => Self::Phase(u + offset),
-            Self::Duty3(a, b, c) => Self::Duty3(a + offset, b + offset, c + offset),
-            Self::Duty2(a, b) => Self::Duty2(a + offset, b + offset),
-            Self::Duty(a) => Self::Duty(a + offset),
-            Self::αβ(α, β) => Self::αβ(α + offset, β + offset),
-            Self::Dq(d, q) => Self::Dq(d + offset, q + offset),
+            Self::Phase3(a, b, c) => {
+                let a = a as f64 + offset;
+                let b = b as f64 + offset;
+                let c = c as f64 + offset;
+                Self::Phase3(a as f32, b as f32, c as f32)
+            }
+            Self::Phase2(a, b) => {
+                let a = a as f64 + offset;
+                let b = b as f64 + offset;
+                Self::Phase2(a as f32, b as f32)
+            }
+            Self::Phase(u) => {
+                let u = u as f64 + offset;
+                Self::Phase(u as f32)
+            }
+            Self::Duty3(a, b, c) => {
+                let a = a as f64 + offset;
+                let b = b as f64 + offset;
+                let c = c as f64 + offset;
+                Self::Duty3(a as f32, b as f32, c as f32)
+            }
+            Self::Duty2(a, b) => {
+                let a = a as f64 + offset;
+                let b = b as f64 + offset;
+                Self::Duty2(a as f32, b as f32)
+            }
+            Self::Duty(a) => {
+                let a = a as f64 + offset;
+                Self::Duty(a as f32)
+            }
+            Self::αβ(α, β) => {
+                let α = α as f64 + offset;
+                let β = β as f64 + offset;
+                Self::αβ(α as f32, β as f32)
+            }
+            Self::Dq(d, q) => {
+                let d = d as f64 + offset;
+                let q = q as f64 + offset;
+                Self::Dq(d as f32, q as f32)
+            }
         }
     }
     pub fn mul(self, val: f32) -> Self {
@@ -557,10 +598,12 @@ impl Voltage {
             // BUG 单精度计算在esp32平台会出现意外结果
             let a = sector as f64 * PI_3 as f64 - angle_el as f64;
             let T1 = SQRT_3 * libm::sinf(a as f32) * Uout;
+            let T1 = T1 as f64;
             // BUG 单精度计算在esp32平台会出现意外结果
             let a = angle_el as f64 - (sector as f64 - 1.) * PI_3 as f64;
             let T2 = SQRT_3 * libm::sinf(a as f32) * Uout;
-            let T0 = 1. - T1 - T2; //零矢量作用时间
+            let T2 = T2 as f64;
+            let T0: f64 = 1. - T1 - T2; //零矢量作用时间
             let sector = sector as i32;
             //计算a b c相占空比时长
             let (Ta, Tb, Tc) = match sector {
@@ -604,9 +647,9 @@ impl Voltage {
             };
 
             //计算相电压
-            let ua = Ta * voltage_limit;
-            let ub = Tb * voltage_limit;
-            let uc = Tc * voltage_limit;
+            let ua = Ta as f32 * voltage_limit;
+            let ub = Tb as f32 * voltage_limit;
+            let uc = Tc as f32 * voltage_limit;
             Voltage::Phase3(ua, ub, uc)
         } else {
             panic!("")
@@ -627,12 +670,15 @@ impl Voltage {
         };
         //根据角度计算当前扇区
         let sector = libm::floorf(angle_el / PI_3) + 1.;
+        let sector = sector as f64;
         //计算两个非零矢量作用时间
         // BUG 单精度计算在esp32平台会出现意外结果，所以改用双精度计算
-        let a = sector as f64 * PI_3 as f64 - angle_el as f64;
+        let a = sector * PI_3 as f64 - angle_el as f64;
         let T1 = SQRT_3 * libm::sinf(a as f32) * Uout;
-        let a = angle_el as f64 - (sector as f64 - 1.) * PI_3 as f64;
+        let T1 = T1 as f64;
+        let a = angle_el as f64 - (sector - 1.) * PI_3 as f64;
         let T2 = SQRT_3 * libm::sinf(a as f32) * Uout;
+        let T2 = T2 as f64;
         let T0 = 1. - T1 - T2; //零矢量作用时间
 
         //计算a b c相占空比时长
@@ -678,9 +724,9 @@ impl Voltage {
         };
 
         //计算相电压和中心
-        let ua = Ta * voltage_limit;
-        let ub = Tb * voltage_limit;
-        let uc = Tc * voltage_limit;
+        let ua = Ta as f32 * voltage_limit;
+        let ub = Tb as f32 * voltage_limit;
+        let uc = Tc as f32 * voltage_limit;
         // println!("{angle_el},{Uout},{sector},{T0},{T1},{T2},{Ta},{Tb},{Tc},{ua},{ub},{uc}");
         Voltage::Phase3(ua, ub, uc)
     }
@@ -722,19 +768,75 @@ impl core::ops::Add<Self> for Current {
     fn add(self, rhs: Current) -> Self::Output {
         match self {
             Self::Dq(d, q) => match rhs {
-                Self::Dq(a, b) => Current::Dq(d + a, q + b),
-                Self::αβ(a, b) => Current::Dq(d + a, q + b),
-                Self::Phase(a, b, _) => Current::Dq(d + a, q + b),
+                Self::Dq(a, b) => {
+                    let d = d as f64;
+                    let q = q as f64;
+                    let a = a as f64;
+                    let b = b as f64;
+                    Current::Dq((d + a) as f32, (q + b) as f32)
+                }
+                Self::αβ(a, b) => {
+                    let d = d as f64;
+                    let q = q as f64;
+                    let a = a as f64;
+                    let b = b as f64;
+                    Current::Dq((d + a) as f32, (q + b) as f32)
+                }
+                Self::Phase(a, b, _) => {
+                    let d = d as f64;
+                    let q = q as f64;
+                    let a = a as f64;
+                    let b = b as f64;
+                    Current::Dq((d + a) as f32, (q + b) as f32)
+                }
             },
             Self::αβ(α, β) => match rhs {
-                Self::Dq(a, b) => Current::αβ(α + a, β + b),
-                Self::αβ(a, b) => Current::αβ(α + a, β + b),
-                Self::Phase(a, b, _) => Current::αβ(α + a, β + b),
+                Self::Dq(a, b) => {
+                    let α = α as f64;
+                    let β = β as f64;
+                    let a = a as f64;
+                    let b = b as f64;
+                    Current::αβ((α + a) as _, (β + b) as _)
+                }
+                Self::αβ(a, b) => {
+                    let α = α as f64;
+                    let β = β as f64;
+                    let a = a as f64;
+                    let b = b as f64;
+                    Current::αβ((α + a) as _, (β + b) as _)
+                }
+                Self::Phase(a, b, _) => {
+                    let α = α as f64;
+                    let β = β as f64;
+                    let a = a as f64;
+                    let b = b as f64;
+                    Current::αβ((α + a) as _, (β + b) as _)
+                }
             },
             Self::Phase(a, b, c) => match rhs {
-                Self::Dq(a1, b1) => Current::Phase(a + a1, a + b1, c),
-                Self::αβ(a1, b1) => Current::Phase(a + a1, a + b1, c),
-                Self::Phase(a1, b1, c1) => Current::Phase(a + a1, a + b1, c + c1),
+                Self::Dq(a1, b1) => {
+                    let a = a as f64;
+                    let b = b as f64;
+                    let a1 = a1 as f64;
+                    let b1 = b1 as f64;
+                    Current::Phase((a + a1) as f32, (b + b1) as f32, c)
+                }
+                Self::αβ(a1, b1) => {
+                    let a = a as f64;
+                    let b = b as f64;
+                    let a1 = a1 as f64;
+                    let b1 = b1 as f64;
+                    Current::Phase((a + a1) as f32, (b + b1) as f32, c)
+                }
+                Self::Phase(a1, b1, c1) => {
+                    let a = a as f64;
+                    let b = b as f64;
+                    let c = c as f64;
+                    let a1 = a1 as f64;
+                    let b1 = b1 as f64;
+                    let c1 = c1 as f64;
+                    Current::Phase((a + a1) as f32, (b + b1) as f32, (c + c1) as f32)
+                }
             },
         }
     }
@@ -751,19 +853,75 @@ impl core::ops::Sub<Self> for Current {
     fn sub(self, rhs: Current) -> Self::Output {
         match self {
             Self::Dq(d, q) => match rhs {
-                Self::Dq(a, b) => Current::Dq(d - a, q - b),
-                Self::αβ(a, b) => Current::Dq(d - a, q - b),
-                Self::Phase(a, b, _) => Current::Dq(d - a, q - b),
+                Self::Dq(a, b) => {
+                    let d = d as f64;
+                    let q = q as f64;
+                    let a = a as f64;
+                    let b = b as f64;
+                    Current::Dq((d - a) as f32, (q - b) as f32)
+                }
+                Self::αβ(a, b) => {
+                    let d = d as f64;
+                    let q = q as f64;
+                    let a = a as f64;
+                    let b = b as f64;
+                    Current::Dq((d - a) as f32, (q - b) as f32)
+                }
+                Self::Phase(a, b, _) => {
+                    let d = d as f64;
+                    let q = q as f64;
+                    let a = a as f64;
+                    let b = b as f64;
+                    Current::Dq((d - a) as f32, (q - b) as f32)
+                }
             },
             Self::αβ(α, β) => match rhs {
-                Self::Dq(a, b) => Current::αβ(α - a, β - b),
-                Self::αβ(a, b) => Current::αβ(α - a, β - b),
-                Self::Phase(a, b, _) => Current::αβ(α - a, β - b),
+                Self::Dq(a, b) => {
+                    let α = α as f64;
+                    let β = β as f64;
+                    let a = a as f64;
+                    let b = b as f64;
+                    Current::αβ((α - a) as _, (β - b) as _)
+                }
+                Self::αβ(a, b) => {
+                    let α = α as f64;
+                    let β = β as f64;
+                    let a = a as f64;
+                    let b = b as f64;
+                    Current::αβ((α - a) as _, (β - b) as _)
+                }
+                Self::Phase(a, b, _) => {
+                    let α = α as f64;
+                    let β = β as f64;
+                    let a = a as f64;
+                    let b = b as f64;
+                    Current::αβ((α - a) as _, (β - b) as _)
+                }
             },
             Self::Phase(a, b, c) => match rhs {
-                Self::Dq(a1, b1) => Current::Phase(a - a1, a - b1, c),
-                Self::αβ(a1, b1) => Current::Phase(a - a1, a - b1, c),
-                Self::Phase(a1, b1, c1) => Current::Phase(a - a1, a - b1, c - c1),
+                Self::Dq(a1, b1) => {
+                    let a = a as f64;
+                    let b = b as f64;
+                    let a1 = a1 as f64;
+                    let b1 = b1 as f64;
+                    Current::Phase((a - a1) as f32, (b - b1) as f32, c)
+                }
+                Self::αβ(a1, b1) => {
+                    let a = a as f64;
+                    let b = b as f64;
+                    let a1 = a1 as f64;
+                    let b1 = b1 as f64;
+                    Current::Phase((a - a1) as f32, (b - b1) as f32, c)
+                }
+                Self::Phase(a1, b1, c1) => {
+                    let a = a as f64;
+                    let b = b as f64;
+                    let c = c as f64;
+                    let a1 = a1 as f64;
+                    let b1 = b1 as f64;
+                    let c1 = c1 as f64;
+                    Current::Phase((a - a1) as f32, (b - b1) as f32, (c - c1) as f32)
+                }
             },
         }
     }

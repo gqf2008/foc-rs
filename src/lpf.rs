@@ -28,13 +28,14 @@ impl LowPassFilter {
             self.y_prev = x as f64;
             return x;
         }
+        let x = x as f64;
         // 一阶低通滤波的算法公式为：
         // Y(n)=αX(n) + (1-α)Y(n-1)
         // 式中：α=滤波系数；X(n)=本次采样值；Y(n-1)=上次滤波输出值；Y(n)=本次滤波输出值。
         //计算滤波系数
         let alpha = self.tf / (self.tf + dt);
         // let y = alpha * x + (1.0 - alpha) * self.y_prev;
-        let y = alpha * self.y_prev + (1.0 - alpha) * x as f64;
+        let y = alpha * self.y_prev + (1.0 - alpha) * x;
         self.y_prev = y;
         y as f32
     }

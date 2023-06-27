@@ -1,24 +1,24 @@
 pub struct Pid {
-    pub P: f32,
-    pub I: f32,
-    pub D: f32,
-    pub output_ramp: f32,
-    pub limit: f32,
+    pub P: f64,
+    pub I: f64,
+    pub D: f64,
+    pub output_ramp: f64,
+    pub limit: f64,
 
-    error_prev: f32,
-    output_prev: f32,
-    integral_prev: f32,
+    error_prev: f64,
+    output_prev: f64,
+    integral_prev: f64,
     timestamp_prev: i64,
 }
 
 impl Pid {
     pub fn new(P: f32, I: f32, D: f32, ramp: f32, limit: f32) -> Self {
         Pid {
-            P,
-            I,
-            D,
-            limit,
-            output_ramp: ramp,
+            P: P as f64,
+            I: I as f64,
+            D: D as f64,
+            limit: limit as f64,
+            output_ramp: ramp as f64,
             error_prev: 0.,
             output_prev: 0.,
             integral_prev: 0.,
@@ -35,16 +35,15 @@ impl Pid {
         self
     }
     pub fn output(&mut self, error: f32, timestamp_us: i64) -> f32 {
+        let error = error as f64;
         let timestamp_now = timestamp_us;
-        let ts = (timestamp_now - self.timestamp_prev) as f32 / 1000000.;
+        let ts = (timestamp_now - self.timestamp_prev) as f64 / 1000000.;
         self.timestamp_prev = timestamp_now;
         let ts = if ts <= 0. || ts > 0.5 { 0.001 } else { ts };
 
         let proportional = self.P * error;
         let integral = if self.I > 0. {
-            (self.integral_prev as f64
-                + (self.I * ts * 0.5 * (error as f64 + self.error_prev as f64) as f32) as f64)
-                as f32
+            self.integral_prev as f64 + (self.I * ts * 0.5 * (error + self.error_prev))
         } else {
             0.
         };
@@ -59,11 +58,11 @@ impl Pid {
         };
 
         let derivative = if self.D > 0. {
-            self.D * (error as f64 - self.error_prev as f64) as f32 / ts
+            self.D * (error - self.error_prev) / ts
         } else {
             0.
         };
-        let output = (proportional as f64 + integral as f64 + derivative as f64) as f32;
+        let output = proportional + integral + derivative;
         let mut output = if output < -self.limit {
             -self.limit
         } else if output > self.limit {
@@ -73,16 +72,16 @@ impl Pid {
         };
 
         if self.output_ramp > 0. {
-            let output_rate = (output as f64 - self.output_prev as f64) as f32 / ts;
+            let output_rate = (output - self.output_prev) / ts;
             if output_rate > self.output_ramp {
-                output = (self.output_prev as f64 + (self.output_ramp * ts) as f64) as f32;
+                output = self.output_prev + (self.output_ramp * ts);
             } else if output_rate < -self.output_ramp {
-                output = (self.output_prev as f64 - (self.output_ramp * ts) as f64) as f32;
+                output = self.output_prev - (self.output_ramp * ts);
             }
         }
         self.integral_prev = integral;
         self.output_prev = output;
         self.error_prev = error;
-        output
+        output as f32
     }
 }
